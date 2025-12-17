@@ -1,0 +1,139 @@
+"""Help command"""
+
+import sys
+from pathlib import Path
+
+from jenkins_tools.core import Command
+
+
+class HelpCommand(Command):
+    """Display help information for commands"""
+
+    # 命令說明對照表
+    COMMAND_DESCRIPTIONS = {
+        "auth": "Verify Jenkins authentication",
+        "list-views": "List all Jenkins views",
+        "list-jobs": "List jobs in a view or all jobs",
+        "get-job": "Get job XML configuration",
+        "list-builds": "List build history for a job",
+        "console": "Get console output of a build",
+        "job-status": "Show job status and triggers",
+        "job-diff": "Compare two job configurations",
+        "list-credentials": "List Jenkins credentials metadata",
+        "describe-credentials": "Describe a specific credential",
+        "add-job-to-view": "Add jobs to a view",
+        "copy-job": "Copy a job to a new job",
+        "update-job": "Update job configuration from XML",
+        "help": "Show help information",
+    }
+
+    def __init__(self, args=None):
+        """
+        Initialize with command line arguments
+
+        Args:
+            args: List of command arguments (sys.argv[2:])
+                  If empty, show command list
+                  If contains command name, show detailed help for that command
+        """
+        self.args = args or []
+
+    def execute(self) -> int:
+        """Execute help command"""
+        # 沒有參數：顯示所有命令列表
+        if not self.args:
+            self._show_command_list()
+            return 0
+
+        # 有參數：顯示特定命令的詳細說明
+        command = self.args[0]
+        return self._show_command_help(command)
+
+    def _show_command_list(self):
+        """顯示所有可用命令的列表"""
+        program_name = Path(sys.argv[0]).name if sys.argv else "jenkee"
+        print("Jenkins Inspector CLI v0.1.0")
+        print()
+        print(f"Usage: {program_name} <command> [options]")
+        print(f"       {program_name} help <command>  Show detailed help for a command")
+        print()
+        print("Available commands:")
+        print()
+
+        # 按照命令名稱排序顯示
+        for cmd in sorted(self.COMMAND_DESCRIPTIONS.keys()):
+            desc = self.COMMAND_DESCRIPTIONS[cmd]
+            print(f"  {cmd:25s} {desc}")
+
+        print()
+        print(
+            f"Run '{program_name} help <command>' for detailed information about a specific command."
+        )
+
+    def _show_command_help(self, command: str) -> int:
+        """
+        顯示特定命令的詳細說明
+
+        Args:
+            command: 命令名稱
+
+        Returns:
+            0 if successful, 1 if command not found or doc file missing
+        """
+        # 檢查命令是否存在
+        if command not in self.COMMAND_DESCRIPTIONS:
+            print(f"Error: Unknown command '{command}'", file=sys.stderr)
+            program_name = Path(sys.argv[0]).name if sys.argv else "jenkee"
+            print(f"Run '{program_name} help' to see available commands.", file=sys.stderr)
+            return 1
+
+        # 嘗試讀取文件檔案
+        doc_content = self._load_doc_file(command)
+        if doc_content is None:
+            print(f"Error: No documentation found for command '{command}'", file=sys.stderr)
+            print(f"Documentation file should be at: docs/examples/{command}.md", file=sys.stderr)
+            return 1
+
+        # 顯示文件內容
+        print(doc_content)
+        return 0
+
+    def _load_doc_file(self, command: str):
+        """
+        載入命令的文件檔案
+
+        Args:
+            command: 命令名稱
+
+        Returns:
+            文件內容，如果檔案不存在則返回 None
+        """
+        # 嘗試多種路徑來找到文件
+        # 1. 從安裝的 package 中讀取 (使用 importlib.resources)
+        try:
+            import importlib.resources as resources
+
+            try:
+                # Python 3.9+
+                doc_file = resources.files("jenkins_tools").joinpath(f"docs/examples/{command}.md")
+                if doc_file.is_file():
+                    return doc_file.read_text(encoding="utf-8")
+            except AttributeError:
+                # Python 3.8
+                with resources.path("jenkins_tools", "docs") as docs_path:
+                    doc_file = docs_path / "examples" / f"{command}.md"
+                    if doc_file.exists():
+                        return doc_file.read_text(encoding="utf-8")
+        except (FileNotFoundError, ModuleNotFoundError):
+            pass
+
+        # 2. 從開發環境讀取（相對於此檔案的位置）
+        current_file = Path(__file__)
+        # jenkins_tools/commands/help.py -> jenkins_tools/ -> root/
+        project_root = current_file.parent.parent.parent
+        doc_file = project_root / "docs" / "examples" / f"{command}.md"
+
+        if doc_file.exists():
+            return doc_file.read_text(encoding="utf-8")
+
+        return None
