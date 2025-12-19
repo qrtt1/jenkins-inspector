@@ -28,6 +28,21 @@ source venv/bin/activate
 pip install -e .
 ```
 
+## 與 AI Agent 的互動
+
+如果你不熟悉 Jenkins Inspector 的使用方式，或想讓 AI agent 協助你完成 Jenkins 相關任務，可以使用 `prompt` 命令：
+
+```bash
+jenkee prompt
+```
+
+這個命令會輸出專為 AI agent 設計的使用指引，包含：
+- Jenkins Inspector 的功能說明
+- 各命令的使用方式與情境
+- AI agent 操作建議與最佳實踐
+
+你可以將輸出的內容複製給你的 AI assistant（如 ChatGPT、Claude），讓它更了解如何協助你使用 Jenkins Inspector。
+
 ## 設定認證
 
 ```bash
