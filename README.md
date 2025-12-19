@@ -6,7 +6,21 @@ Jenkins CLI 工具，提供命令列介面來管理和探索 Jenkins jobs、buil
 
 ## 安裝
 
+### 使用 pipx 安裝（推薦）
+
 ```bash
+pipx install git+https://github.com/qrtt1/jenkins-inspector
+```
+
+### 開發模式安裝
+
+如果想要參與開發或修改程式碼：
+
+```bash
+# Clone repository
+git clone https://github.com/qrtt1/jenkins-inspector
+cd jenkins-inspector
+
 # 啟用虛擬環境
 source venv/bin/activate
 
