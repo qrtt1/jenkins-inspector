@@ -24,6 +24,7 @@ class HelpCommand(Command):
         "add-job-to-view": "Add jobs to a view",
         "copy-job": "Copy a job to a new job",
         "update-job": "Update job configuration from XML",
+        "groovy": "Execute a Groovy script on the server",
         "prompt": "Display AI agent guide for using jenkee",
         "help": "Show help information",
     }

@@ -83,6 +83,7 @@ Commands:
   describe-credentials <id>         查看 credential 詳細資訊
   copy-job <source> <dest>          複製 job 為新 job
   update-job <job>                  更新 job 配置 (從 stdin)
+  groovy <script>                   執行 Groovy script
   add-job-to-view <view> <job>...   將 jobs 加入 view
 
 範例:

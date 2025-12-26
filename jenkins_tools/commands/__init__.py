@@ -13,6 +13,7 @@ from jenkins_tools.commands.describe_credentials import DescribeCredentialsComma
 from jenkins_tools.commands.add_job_to_view import AddJobToViewCommand
 from jenkins_tools.commands.copy_job import CopyJobCommand
 from jenkins_tools.commands.update_job import UpdateJobCommand
+from jenkins_tools.commands.groovy import GroovyCommand
 from jenkins_tools.commands.help import HelpCommand
 from jenkins_tools.commands.prompt import PromptCommand
 
@@ -30,6 +31,7 @@ __all__ = [
     "AddJobToViewCommand",
     "CopyJobCommand",
     "UpdateJobCommand",
+    "GroovyCommand",
     "HelpCommand",
     "PromptCommand",
 ]
