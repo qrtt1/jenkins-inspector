@@ -19,6 +19,7 @@ from jenkins_tools.commands.create_job import CreateJobCommand
 from jenkins_tools.commands.delete_job import DeleteJobCommand
 from jenkins_tools.commands.disable_job import DisableJobCommand
 from jenkins_tools.commands.enable_job import EnableJobCommand
+from jenkins_tools.commands.delete_builds import DeleteBuildsCommand
 from jenkins_tools.commands.groovy import GroovyCommand
 from jenkins_tools.commands.help import HelpCommand
 from jenkins_tools.commands.prompt import PromptCommand
@@ -43,6 +44,7 @@ __all__ = [
     "DeleteJobCommand",
     "DisableJobCommand",
     "EnableJobCommand",
+    "DeleteBuildsCommand",
     "GroovyCommand",
     "HelpCommand",
     "PromptCommand",

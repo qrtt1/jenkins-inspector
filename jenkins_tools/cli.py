@@ -23,6 +23,7 @@ from jenkins_tools.commands import (
     DeleteJobCommand,
     DisableJobCommand,
     EnableJobCommand,
+    DeleteBuildsCommand,
     GroovyCommand,
     HelpCommand,
     PromptCommand,
@@ -96,6 +97,9 @@ def main():
         sys.exit(cmd.execute())
     elif command == "enable-job":
         cmd = EnableJobCommand(sys.argv[2:])
+        sys.exit(cmd.execute())
+    elif command == "delete-builds":
+        cmd = DeleteBuildsCommand(sys.argv[2:])
         sys.exit(cmd.execute())
     elif command == "groovy":
         cmd = GroovyCommand(sys.argv[2:])

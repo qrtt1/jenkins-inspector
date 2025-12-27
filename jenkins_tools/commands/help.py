@@ -30,6 +30,7 @@ class HelpCommand(Command):
         "delete-job": "Delete one or more jobs (IRREVERSIBLE)",
         "disable-job": "Disable one or more jobs",
         "enable-job": "Enable one or more jobs",
+        "delete-builds": "Delete build records (IRREVERSIBLE)",
         "groovy": "Execute a Groovy script on the server",
         "prompt": "Display AI agent guide for using jenkee",
         "help": "Show help information",
@@ -40,9 +41,8 @@ class HelpCommand(Command):
         "delete-job",  # 刪除 job（不可逆）
         "disable-job",  # 停用 job
         "enable-job",  # 啟用 job
+        "delete-builds",  # 刪除 build 記錄（不可逆）
         "groovy",  # 可執行任意操作
-        # 未來會加入：
-        # "delete-builds",  # 刪除 build 記錄（不可逆）
     }
 
     def __init__(self, args=None):
