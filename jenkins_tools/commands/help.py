@@ -28,6 +28,8 @@ class HelpCommand(Command):
         "stop-builds": "Stop all running builds for job(s)",
         "create-job": "Create a new job from XML configuration",
         "delete-job": "Delete one or more jobs (IRREVERSIBLE)",
+        "disable-job": "Disable one or more jobs",
+        "enable-job": "Enable one or more jobs",
         "groovy": "Execute a Groovy script on the server",
         "prompt": "Display AI agent guide for using jenkee",
         "help": "Show help information",
@@ -36,10 +38,10 @@ class HelpCommand(Command):
     # 危險命令集合（需要使用者確認才能執行）
     DANGEROUS_COMMANDS = {
         "delete-job",  # 刪除 job（不可逆）
+        "disable-job",  # 停用 job
+        "enable-job",  # 啟用 job
         "groovy",  # 可執行任意操作
         # 未來會加入：
-        # "disable-job",    # 停用 job
-        # "enable-job",     # 啟用 job
         # "delete-builds",  # 刪除 build 記錄（不可逆）
     }
 
