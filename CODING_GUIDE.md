@@ -182,6 +182,39 @@ jenkins-inspector/
 8. **更新 prompt 命令** - 在 `commands/prompt.py` 的指引中加入新命令說明
 9. **使用 Black 格式化程式碼** - 完成後執行 `black jenkins_tools/`
 
+### 危險命令的開發
+
+某些命令會對 Jenkins 進行不可逆或影響重大的操作，需要特別標記為「危險命令」：
+
+**危險命令的定義**：
+- 不可逆操作（如 delete-job、delete-builds）
+- 會影響系統可用性（如 disable-job、enable-job）
+- 具有最高權限可執行任意操作（如 groovy）
+
+**開發危險命令時的額外步驟**：
+
+1. **標記為危險命令**
+   - 在 `commands/help.py` 的 `DANGEROUS_COMMANDS` 集合中加入命令名稱
+   - 這會讓命令在一般 `help` 中隱藏，只在 `help --ask-before-run-commands` 顯示
+
+2. **文件中加入警告區段**
+   - 在 `docs/examples/<command>.md` 開頭加入 `⚠️ 警告` 區段
+   - 明確說明操作的危險性與影響
+   - 說明是否可逆
+
+3. **AI Agent 使用限制**
+   - 在文件中加入 `## AI Agent 使用限制` 區段
+   - 列出 AI agent 在使用此命令前必須完成的步驟：
+     1. 向使用者說明將要執行的操作
+     2. 說明操作的影響
+     3. 取得使用者明確同意
+
+4. **最佳實踐建議**
+   - 在文件中提供安全使用的最佳實踐
+   - 如：刪除前先備份、使用軟刪除策略等
+
+**範例**: 參考 `docs/examples/delete-job.md`、`docs/examples/groovy.md`
+
 ### Command 示範文件
 
 每當完成一個 command 時，必須建立對應的示範文件。
@@ -318,3 +351,11 @@ black --check jenkins_tools/
 - [ ] 測試 `jks <command>` 功能
 - [ ] 測試 `jks help <command>` 顯示
 - [ ] 確認 `jks prompt` 包含新命令
+
+**如果是危險命令，額外檢查**：
+
+- [ ] 在 `commands/help.py` 的 `DANGEROUS_COMMANDS` 集合中加入
+- [ ] 在文件中加入 `⚠️ 警告` 區段
+- [ ] 在文件中加入 `## AI Agent 使用限制` 區段
+- [ ] 提供安全使用的最佳實踐建議
+- [ ] 測試 `jks help --ask-before-run-commands` 顯示危險命令
