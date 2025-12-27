@@ -27,9 +27,20 @@ class HelpCommand(Command):
         "build": "Trigger a Jenkins job build",
         "stop-builds": "Stop all running builds for job(s)",
         "create-job": "Create a new job from XML configuration",
+        "delete-job": "Delete one or more jobs (IRREVERSIBLE)",
         "groovy": "Execute a Groovy script on the server",
         "prompt": "Display AI agent guide for using jenkee",
         "help": "Show help information",
+    }
+
+    # 危險命令集合（需要使用者確認才能執行）
+    DANGEROUS_COMMANDS = {
+        "delete-job",  # 刪除 job（不可逆）
+        "groovy",  # 可執行任意操作
+        # 未來會加入：
+        # "disable-job",    # 停用 job
+        # "enable-job",     # 啟用 job
+        # "delete-builds",  # 刪除 build 記錄（不可逆）
     }
 
     def __init__(self, args=None):
@@ -40,8 +51,12 @@ class HelpCommand(Command):
             args: List of command arguments (sys.argv[2:])
                   If empty, show command list
                   If contains command name, show detailed help for that command
+                  Can include --ask-before-run-commands flag to show dangerous commands
         """
         self.args = args or []
+        self.show_dangerous = "--ask-before-run-commands" in self.args
+        # 移除 flag，只保留命令名稱
+        self.args = [arg for arg in self.args if arg != "--ask-before-run-commands"]
 
     def execute(self) -> int:
         """Execute help command"""
@@ -62,13 +77,32 @@ class HelpCommand(Command):
         print(f"Usage: {program_name} <command> [options]")
         print(f"       {program_name} help <command>  Show detailed help for a command")
         print()
+
+        # 根據是否顯示危險命令，分類顯示
+        safe_commands = []
+        dangerous_commands = []
+
+        for cmd in sorted(self.COMMAND_DESCRIPTIONS.keys()):
+            if cmd in self.DANGEROUS_COMMANDS:
+                dangerous_commands.append(cmd)
+            else:
+                safe_commands.append(cmd)
+
+        # 顯示一般命令
         print("Available commands:")
         print()
-
-        # 按照命令名稱排序顯示
-        for cmd in sorted(self.COMMAND_DESCRIPTIONS.keys()):
+        for cmd in safe_commands:
             desc = self.COMMAND_DESCRIPTIONS[cmd]
             print(f"  {cmd:25s} {desc}")
+
+        # 如果有 --ask-before-run-commands flag，顯示危險命令
+        if self.show_dangerous and dangerous_commands:
+            print()
+            print("Dangerous commands (require user confirmation):")
+            print()
+            for cmd in dangerous_commands:
+                desc = self.COMMAND_DESCRIPTIONS[cmd]
+                print(f"  {cmd:25s} {desc} ⚠️")
 
         print()
         print(
