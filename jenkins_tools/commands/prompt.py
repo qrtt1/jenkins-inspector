@@ -195,6 +195,90 @@ jenkee add-job-to-view <view-name> <job-name>
 - 批次更新多個 job 的配置
 - 組織 jobs 到不同的 views
 
+## ⚠️ groovy 命令 - 特別警告
+
+`groovy` 命令是**最高風險**的命令，可以在 Jenkins server 上執行任意操作。
+
+### AI Agent 必須遵守的使用規則：
+
+**1. 優先檢查替代命令（必須）**
+
+在考慮使用 groovy 前，必須先確認是否有專用命令：
+- 列出 jobs → `jenkee list-jobs --all`
+- 取得 job 配置 → `jenkee get-job <job>`
+- 列出 credentials → `jenkee list-credentials`
+- 觸發 build → `jenkee build <job>`
+- 查看 build 歷史 → `jenkee list-builds <job>`
+- 停止 builds → `jenkee stop-builds <job>`
+- 建立 job → `jenkee create-job <job>`
+
+**只有在確認沒有任何專用命令可以完成任務時，才考慮使用 groovy**
+
+**2. 必須向使用者確認（必須）**
+
+使用 groovy 前必須：
+- 說明為什麼需要使用 groovy
+- 說明已檢查過所有替代命令但都不適用
+- 詳細說明 groovy script 會執行什麼操作
+- 說明可能的影響範圍與風險
+- **等待使用者明確同意後才執行**
+
+**3. 必須詳細說明 Script 內容（必須）**
+
+提供的說明必須包含：
+- Script 會執行什麼操作（讀取 vs 修改）
+- 會存取哪些資料或資源
+- 會對系統造成什麼影響
+- 操作是否可逆
+
+### Groovy 的能力與風險
+
+**可以執行的操作：**
+- ✗ 修改或刪除 jobs 和 builds
+- ✗ 修改 Jenkins 系統配置
+- ✗ 讀取所有 credentials（包含敏感資料）
+- ✗ 執行系統命令
+- ✗ 造成不可逆的資料損失
+- ✗ 影響 Jenkins 系統穩定性
+
+### 正確與錯誤示範
+
+**❌ 錯誤示範：**
+```
+User: 幫我列出所有 jobs
+AI: 好的，我使用 groovy 列出
+[直接執行 groovy script]  ← 錯誤！應該使用 list-jobs
+```
+
+**✓ 正確示範 1：**
+```
+User: 幫我列出所有 jobs
+AI: 我使用 `jenkee list-jobs --all` 命令列出所有 jobs。
+[執行 list-jobs --all]  ← 正確！使用專用命令
+```
+
+**✓ 正確示範 2（需要 groovy 的情況）：**
+```
+User: 幫我找出所有使用 azure-spn credential 的 jobs
+AI: 這個需求沒有專用命令可以完成。我需要使用 groovy script 來查詢。
+
+我打算執行以下 groovy script：
+[顯示完整 script]
+
+這個 script 會：
+- 遍歷所有 jobs
+- 檢查每個 job 的 XML 配置
+- 找出使用 azure-spn credential 的 jobs
+- 只執行讀取操作，不會修改任何資料
+
+這是唯一的解決方式。可以執行嗎？
+[等待使用者確認]
+```
+
+**詳細說明請執行：** `jenkee help groovy`
+
+---
+
 ## 提示
 
 1. **所有 job 和 view 名稱都區分大小寫**

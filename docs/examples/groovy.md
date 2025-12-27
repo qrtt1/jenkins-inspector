@@ -1,5 +1,56 @@
 # groovy - 執行 Groovy Script
 
+## ⚠️ AI Agent 使用警告
+
+**這是一個高風險命令！AI agent 在使用此命令前必須：**
+
+### 1. 優先尋找替代命令
+
+在考慮使用 groovy 前，必須先檢查是否有專用命令可以完成任務：
+
+- 列出 jobs？使用 `jenkee list-jobs --all`
+- 取得 job 配置？使用 `jenkee get-job <job>`
+- 列出 credentials？使用 `jenkee list-credentials`
+- 觸發 build？使用 `jenkee build <job>`
+- 查看 build 歷史？使用 `jenkee list-builds <job>`
+
+**只有在確認沒有任何專用命令可以完成任務時，才考慮使用 groovy**
+
+### 2. 必須向使用者確認
+
+使用 groovy 前必須：
+- 說明為什麼需要使用 groovy
+- 說明已檢查過所有替代命令但都不適用
+- 詳細說明 groovy script 會執行什麼操作
+- 說明可能的影響範圍與風險
+- 等待使用者明確同意後才執行
+
+### 3. 必須詳細說明 Script 內容
+
+提供給使用者的說明必須包含：
+- Script 會執行什麼操作（讀取 vs 修改）
+- 會存取哪些資料或資源
+- 會對系統造成什麼影響
+- 操作是否可逆
+
+### Groovy Script 的能力與風險
+
+**可以執行的操作：**
+- ✗ 修改或刪除 jobs 和 builds
+- ✗ 修改 Jenkins 系統配置
+- ✗ 讀取所有 credentials（包含敏感資料）
+- ✗ 執行系統命令
+- ✗ 造成不可逆的資料損失
+- ✗ 影響 Jenkins 系統穩定性
+
+**使用原則：**
+1. 只在確實沒有其他替代命令時使用
+2. 必須完整理解 script 的作用
+3. 必須取得使用者明確授權
+4. 優先使用唯讀操作，避免修改操作
+
+---
+
 ## 用途
 
 在 Jenkins 伺服器上執行 Groovy script。這是一個強大的工具，可用於執行複雜的查詢、批次修改或存取 Jenkins 內部 API（如 `CredentialsProvider`、`hudson.model.Hudson` 等）。
