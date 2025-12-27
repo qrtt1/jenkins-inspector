@@ -62,6 +62,8 @@ jenkee auth
 
 ## 可用命令
 
+### 一般命令
+
 | 命令 | 說明 | 範例 |
 |------|------|------|
 | `help` | 顯示命令說明 | `jenkee help [command]` |
@@ -79,6 +81,23 @@ jenkee auth
 | `add-job-to-view` | 將 jobs 加入到 view | `jenkee add-job-to-view <view> <job> [job ...]` |
 | `copy-job` | 複製 job 為新 job | `jenkee copy-job <source> <destination>` |
 | `update-job` | 更新 job 配置 | `jenkee update-job <job> < config.xml` |
+| `build` | 觸發 job build | `jenkee build <job> [-p key=value] [-s] [-f]` |
+| `stop-builds` | 停止執行中的 builds | `jenkee stop-builds <job> [job ...]` |
+| `create-job` | 建立新 job | `jenkee create-job <job> < config.xml` |
+
+### 危險命令（需要使用者確認）
+
+以下命令會對 Jenkins 進行不可逆或影響重大的操作，AI agent 在使用前必須向使用者確認：
+
+| 命令 | 說明 | 範例 |
+|------|------|------|
+| `delete-job` ⚠️ | 刪除 job（不可逆） | `jenkee delete-job <job> [job ...]` |
+| `disable-job` ⚠️ | 停用 job | `jenkee disable-job <job> [job ...]` |
+| `enable-job` ⚠️ | 啟用 job | `jenkee enable-job <job> [job ...]` |
+| `delete-builds` ⚠️ | 刪除 build 記錄（不可逆） | `jenkee delete-builds <job> <range>` |
+| `groovy` ⚠️ | 執行 Groovy script（最高風險） | `jenkee groovy <script>` |
+
+**注意**: 危險命令預設不會顯示在 `jenkee help` 中。使用 `jenkee help --ask-before-run-commands` 可以查看完整命令列表。
 
 詳細使用說明請參考 [docs/examples/](docs/examples/) 目錄下的各命令文件。
 
@@ -89,21 +108,26 @@ jenkee auth
 - 查看 job 配置與狀態
 - 追蹤 job 觸發關係
 
-### 2. 查看 Build 資訊
-- 列出 job 的 build 歷史
-- 取得 console 輸出進行除錯
-- 快速找到成功/失敗的 builds
+### 2. Build 管理
+- 觸發 job builds（支援參數、同步與追蹤模式）
+- 停止執行中的 builds
+- 查看 build 歷史與 console 輸出
+- 刪除舊的 build 記錄（需確認）
 
-### 3. 管理 Credentials
+### 3. Job 管理
+- 建立、複製、更新 job 配置
+- 刪除 jobs（需確認）
+- 停用/啟用 jobs（需確認）
+- 比較 job 配置差異
+- 將 jobs 加入 views
+
+### 4. Credentials 管理
 - 列出所有 credentials metadata
 - 查看 credentials 類型與相關資訊
 - 驗證 credentials 配置
 
-### 4. Job 管理
-- 複製 job 配置
-- 更新 job 設定
-- 比較 job 配置差異
-- 將 jobs 加入 views
+### 5. 進階操作
+- 執行 Groovy scripts（需確認，最高權限）
 
 ## 文件
 
@@ -125,46 +149,3 @@ jenkee auth
 - 功能完整實作（包含 help、prompt、example 文件）
 - 通過所有整合測試
 
-## 專案結構
-
-```
-jenkins-inspector/
-├── README.md                  # 本文件
-├── CODING_GUIDE.md            # 開發指南
-├── pyproject.toml             # Python package 設定
-├── setup.py                   # 向後相容設定
-├── jenkins_tools/             # 主要 package
-│   ├── cli.py                 # CLI entry point
-│   ├── core.py                # 核心元件
-│   └── commands/              # Command 實作
-│       ├── auth.py
-│       ├── list_views.py
-│       ├── list_jobs.py
-│       ├── get_job.py
-│       ├── list_builds.py
-│       ├── console.py
-│       ├── job_status.py
-│       ├── job_diff.py
-│       ├── list_credentials.py
-│       ├── describe_credentials.py
-│       ├── add_job_to_view.py
-│       ├── copy_job.py
-│       └── update_job.py
-└── docs/
-    └── examples/              # Command 使用範例
-        ├── auth.md
-        ├── prompt.md
-        ├── list-views.md
-        ├── list-jobs.md
-        ├── get-job.md
-        ├── list-builds.md
-        ├── console.md
-        ├── job-status.md
-        ├── job-diff.md
-        ├── list-credentials.md
-        ├── describe-credentials.md
-        ├── add-job-to-view.md
-        ├── copy-job.md
-        ├── update-job.md
-        └── help.md
-```
