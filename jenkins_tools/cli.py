@@ -17,6 +17,9 @@ from jenkins_tools.commands import (
     AddJobToViewCommand,
     CopyJobCommand,
     UpdateJobCommand,
+    BuildCommand,
+    StopBuildsCommand,
+    CreateJobCommand,
     GroovyCommand,
     HelpCommand,
     PromptCommand,
@@ -72,6 +75,15 @@ def main():
         sys.exit(cmd.execute())
     elif command == "update-job":
         cmd = UpdateJobCommand(sys.argv[2:])
+        sys.exit(cmd.execute())
+    elif command == "build":
+        cmd = BuildCommand(sys.argv[2:])
+        sys.exit(cmd.execute())
+    elif command == "stop-builds":
+        cmd = StopBuildsCommand(sys.argv[2:])
+        sys.exit(cmd.execute())
+    elif command == "create-job":
+        cmd = CreateJobCommand(sys.argv[2:])
         sys.exit(cmd.execute())
     elif command == "groovy":
         cmd = GroovyCommand(sys.argv[2:])

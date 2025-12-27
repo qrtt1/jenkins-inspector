@@ -51,3 +51,6 @@ htmlcov/
 # Environment variables
 .env
 .env.local
+
+# Claude plans (temporary planning files)
+.claude/plans/
