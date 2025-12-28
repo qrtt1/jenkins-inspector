@@ -37,7 +37,8 @@ class JenkinsConfig:
         # If a legacy file exists at ~/.jenkins-studio/.env, we intentionally do NOT load it.
         legacy_env_path = Path.home() / ".jenkins-studio" / ".env"
         env_path = Path.home() / ".jenkins-inspector" / ".env"
-        load_dotenv(env_path, override=True)
+        # override=False: 環境變數優先於 .env 檔案（重要：讓測試可以覆蓋設定）
+        load_dotenv(env_path, override=False)
         self.jenkins_url = os.getenv("JENKINS_URL")
         self.username = os.getenv("JENKINS_USER_ID")
         self.api_token = os.getenv("JENKINS_API_TOKEN")
