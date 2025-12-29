@@ -2,6 +2,150 @@
 
 本目錄包含 jenkins-inspector 專案的測試套件。測試使用 pytest 框架並透過 testcontainers 提供隔離的 Jenkins 測試環境。
 
+## 第一次環境設定
+
+### 必要條件
+
+在執行測試前，請確認以下環境已準備好：
+
+1. **Python 3.8+**
+   ```bash
+   python3 --version  # 應顯示 3.8 或更高版本
+   ```
+
+2. **Docker**
+   - 測試使用 testcontainers 在 Docker 中啟動 Jenkins
+   - Docker daemon 必須正在運行
+   ```bash
+   docker --version  # 確認 Docker 已安裝
+   docker ps         # 確認 Docker daemon 正在運行
+   ```
+
+3. **虛擬環境（建議）**
+   ```bash
+   # 建立虛擬環境
+   python3 -m venv venv
+
+   # 啟動虛擬環境
+   source venv/bin/activate  # macOS/Linux
+   # 或
+   venv\Scripts\activate     # Windows
+   ```
+
+### 安裝測試依賴
+
+```bash
+# 安裝專案與開發依賴（包含測試工具）
+pip install -e ".[dev]"
+```
+
+這會安裝以下測試相關套件：
+- `pytest>=7.0` - 測試框架
+- `pytest-cov>=4.0` - 測試覆蓋率
+- `testcontainers>=3.7.1` - Docker container 管理
+- `black>=22.0` - 程式碼格式化
+- `flake8>=5.0` - Linting
+- `mypy>=0.990` - 型別檢查
+
+### 驗證安裝
+
+```bash
+# 檢查 pytest 已安裝
+pytest --version
+
+# 檢查測試依賴
+pip list | grep -E "(pytest|testcontainers)"
+```
+
+### 第一次執行測試
+
+**重要提示**：第一次執行測試會比較慢（約 1-2 分鐘），因為需要：
+1. 下載 Jenkins Docker image（約 500MB）
+2. 啟動 Jenkins container
+3. 等待 Jenkins 完全啟動
+
+```bash
+# 執行單一測試驗證環境
+pytest -v tests/test_auth.py::test_auth_success
+```
+
+**預期結果**：
+```
+tests/test_auth.py::test_auth_success PASSED [100%]
+============================== 1 passed in 48.72s ==============================
+```
+
+第一次執行後，Jenkins image 會被快取，後續執行會快很多（約 5-10 秒）。
+
+### 常見問題排除
+
+#### Docker 未運行
+```
+Error: Cannot connect to the Docker daemon
+```
+**解決方法**：啟動 Docker Desktop 或確認 Docker daemon 正在運行
+
+#### 權限問題（Linux）
+```
+Error: Permission denied while trying to connect to Docker
+```
+**解決方法**：
+```bash
+# 將使用者加入 docker 群組
+sudo usermod -aG docker $USER
+# 登出後重新登入
+```
+
+#### Port 衝突
+```
+Error: Port is already allocated
+```
+**解決方法**：testcontainers 會自動分配可用 port，但如果持續發生，請檢查是否有殘留的 container：
+```bash
+docker ps -a | grep jenkins
+docker rm -f <container-id>
+```
+
+#### 測試超時
+```
+Error: Timeout waiting for Jenkins
+```
+**解決方法**：
+- 確認 Docker 有足夠資源（建議至少 2GB RAM）
+- 檢查網路連線（需要下載 Jenkins image）
+- 增加 timeout 設定
+
+## 快速開始指南
+
+完整的測試環境設定與執行流程：
+
+```bash
+# 1. 確認環境
+docker --version        # 確認 Docker 可用
+python3 --version       # 確認 Python 3.8+
+
+# 2. 建立並啟動虛擬環境（如果還沒有）
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+
+# 3. 安裝依賴
+pip install -e ".[dev]"
+
+# 4. 驗證安裝
+pytest --version
+
+# 5. 執行測試（第一次會較慢）
+pytest -v tests/test_auth.py::test_auth_success
+
+# 6. 執行所有測試
+pytest -v
+
+# 7. 執行測試並顯示覆蓋率
+pytest -v --cov=jenkins_tools --cov-report=html
+```
+
+測試成功後，你就可以開始開發新功能或修改現有功能了！
+
 ## 目錄結構
 
 ```
