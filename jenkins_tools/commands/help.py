@@ -133,12 +133,56 @@ class HelpCommand(Command):
         doc_content = self._load_doc_file(command)
         if doc_content is None:
             print(f"Error: No documentation found for command '{command}'", file=sys.stderr)
-            print(f"Documentation file should be at: docs/examples/{command}.md", file=sys.stderr)
+            print(f"See online documentation: https://github.com/qrtt1/jenkins-inspector/blob/main/docs/examples/{command}.md", file=sys.stderr)
             return 1
 
-        # 顯示文件內容
+        # 顯示文件內容，並動態替換相對路徑為 GitHub URLs
+        doc_content = self._replace_relative_links(doc_content)
         print(doc_content)
         return 0
+
+    def _replace_relative_links(self, content: str) -> str:
+        """
+        將文件中的相對路徑替換為 GitHub URLs
+
+        Args:
+            content: 文件內容
+
+        Returns:
+            替換後的文件內容
+        """
+        import re
+
+        base_url = "https://github.com/qrtt1/jenkins-inspector/blob/main"
+
+        # 替換模式：[text](relative/path.md)
+        # 匹配相對路徑（包含 ../ 或直接的檔案名）
+        def replace_link(match):
+            link_text = match.group(1)
+            link_path = match.group(2)
+
+            # 只處理 .md 檔案的相對路徑
+            if not link_path.startswith('http') and link_path.endswith('.md'):
+                # 處理 ../../README.md 這種形式
+                if link_path.startswith('../../'):
+                    # docs/examples/../../README.md -> README.md
+                    new_path = link_path.replace('../../', '')
+                    return f"[{link_text}]({base_url}/{new_path})"
+                # 處理 ../examples/ 這種形式
+                elif link_path.startswith('../'):
+                    # docs/examples/../examples/ -> docs/examples/
+                    new_path = link_path.replace('../', 'docs/')
+                    return f"[{link_text}]({base_url}/{new_path})"
+                # 處理同層檔案 list-credentials.md
+                elif '/' not in link_path:
+                    return f"[{link_text}]({base_url}/docs/examples/{link_path})"
+
+            # 不符合條件的保持原樣
+            return match.group(0)
+
+        # 使用正則表達式替換
+        pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+        return re.sub(pattern, replace_link, content)
 
     def _load_doc_file(self, command: str):
         """
