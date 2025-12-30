@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 
+from jenkins_tools import __version__
 from jenkins_tools.core import Command
 
 
@@ -74,7 +75,7 @@ class HelpCommand(Command):
     def _show_command_list(self):
         """顯示所有可用命令的列表"""
         program_name = Path(sys.argv[0]).name if sys.argv else "jenkee"
-        print("Jenkins Inspector CLI v0.1.0")
+        print(f"Jenkins Inspector CLI v{__version__}")
         print()
         print(f"Usage: {program_name} <command> [options]")
         print(f"       {program_name} help <command>  Show detailed help for a command")

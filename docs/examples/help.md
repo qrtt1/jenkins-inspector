@@ -30,7 +30,7 @@ jenkee help <command>    # 顯示特定命令的詳細說明
 
 ```bash
 $ jenkee help
-Jenkins Inspector CLI v0.1.0
+Jenkins Inspector CLI v0.2.0
 
 Usage: jenkee <command> [options]
        jenkee help <command>  Show detailed help for a command
