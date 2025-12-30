@@ -1,5 +1,9 @@
 """Prompt command - AI Agent guidance for using jenkee"""
 
+import os
+import sys
+from pathlib import Path
+
 from jenkins_tools.core import Command
 
 
@@ -13,12 +17,59 @@ class PromptCommand(Command):
         Args:
             args: List of command arguments (sys.argv[2:])
                   Can include --ask-before-run-commands flag to show dangerous commands guidance
+                  Can include --ignore-override flag to ignore custom prompt files
         """
         self.args = args or []
         self.show_dangerous = "--ask-before-run-commands" in self.args
+        self.ignore_override = "--ignore-override" in self.args
 
     def execute(self) -> int:
         """Execute prompt command - show AI agent guidance"""
+        # If --ignore-override is set, skip custom prompt and use default
+        if self.ignore_override:
+            return self._show_default_prompt()
+
+        # Check for custom prompt file from environment variable or default location
+        custom_prompt_file = os.getenv("JENKINS_INSPECTOR_PROMPT_FILE")
+
+        if custom_prompt_file:
+            # Environment variable is set - must use this file
+            custom_prompt_path = Path(custom_prompt_file)
+
+            if not custom_prompt_path.exists():
+                print(f"Error: Custom prompt file not found: {custom_prompt_file}", file=sys.stderr)
+                return 1
+
+            try:
+                prompt_text = custom_prompt_path.read_text()
+                if not prompt_text.strip():
+                    print(f"Error: Custom prompt file is empty: {custom_prompt_file}", file=sys.stderr)
+                    return 1
+                print(prompt_text.strip())
+                return 0
+            except Exception as e:
+                print(f"Error reading custom prompt file: {e}", file=sys.stderr)
+                return 1
+
+        # Check default location
+        default_prompt_path = Path.home() / ".jenkins-inspector" / "prompt.md"
+        if default_prompt_path.exists():
+            try:
+                prompt_text = default_prompt_path.read_text()
+                if not prompt_text.strip():
+                    print(f"Error: Custom prompt file is empty: {default_prompt_path}", file=sys.stderr)
+                    return 1
+                print(prompt_text.strip())
+                return 0
+            except Exception as e:
+                print(f"Error reading custom prompt file: {e}", file=sys.stderr)
+                return 1
+
+        # Use default prompt
+        return self._show_default_prompt()
+
+    def _show_default_prompt(self) -> int:
+        """Display the default built-in prompt"""
         prompt_text = """
 # Jenkins Inspector (jenkee) - AI Agent Guide
 

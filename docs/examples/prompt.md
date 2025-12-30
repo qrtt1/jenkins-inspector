@@ -232,12 +232,126 @@ jenkee prompt
 
 `prompt` 提供的是總覽性的指引，而 `help <command>` 提供的是特定命令的深入文件。
 
+## 自訂 Prompt
+
+### 功能說明
+
+從 0.2.0 版本開始，支援自訂 prompt 檔案。可以透過預設位置或環境變數指定自訂 prompt 的位置。
+
+### 方式 1：使用預設位置
+
+```bash
+# 建立自訂 prompt 檔案
+cat > ~/.jenkins-inspector/prompt.md << 'EOF'
+# 我的使用指引
+
+自訂的 prompt 內容...
+EOF
+
+# 執行 prompt 命令
+jenkee prompt
+```
+
+### 方式 2：使用環境變數
+
+```bash
+# 建立自訂 prompt 檔案（可放在任意位置）
+cat > /path/to/my-prompt.md << 'EOF'
+# 我的使用指引
+
+自訂的 prompt 內容...
+EOF
+
+# 設定環境變數
+export JENKINS_INSPECTOR_PROMPT_FILE=/path/to/my-prompt.md
+
+# 執行 prompt 命令
+jenkee prompt
+```
+
+### 優先順序
+
+當決定使用哪個 prompt 時，按以下順序檢查：
+
+1. `--ignore-override` flag（如果設定，直接使用內建預設 prompt，忽略所有自訂）
+2. 環境變數 `JENKINS_INSPECTOR_PROMPT_FILE` 指定的檔案
+3. 預設位置 `~/.jenkins-inspector/prompt.md`
+4. 內建的預設 prompt
+
+### 暫時使用預設 Prompt
+
+如果需要暫時使用預設 prompt 而不刪除自訂檔案：
+
+```bash
+# 使用 --ignore-override flag
+jenkee prompt --ignore-override
+```
+
+這個 flag 會忽略所有自訂 prompt（環境變數和預設位置），直接使用內建的預設 prompt。
+
+### 永久恢復預設 Prompt
+
+```bash
+# 方式 1：刪除預設位置的自訂檔案
+rm ~/.jenkins-inspector/prompt.md
+
+# 方式 2：取消設定環境變數
+unset JENKINS_INSPECTOR_PROMPT_FILE
+
+# 再次執行會看到預設內容
+jenkee prompt
+```
+
+### 使用情境
+
+**預設位置適合：**
+- 個人使用者的長期自訂設定
+- 穩定的團隊工作流程
+
+**環境變數適合：**
+- 測試不同的 prompt 內容
+- CI/CD 環境中動態指定 prompt
+- 多個專案使用不同的 prompt
+
+**--ignore-override flag 適合：**
+- 暫時查看預設 prompt 的內容
+- 除錯自訂 prompt 的問題
+- 比較自訂與預設的差異
+
+### 注意事項
+
+1. 自訂 prompt 會完全覆蓋預設內容
+2. 檔案格式為 markdown，可以使用完整的 markdown 語法
+3. 如果自訂檔案不存在、無法讀取或為空，命令會返回錯誤（不會 fallback 到預設 prompt）
+4. 環境變數優先級高於預設位置
+
+### 錯誤處理
+
+當使用自訂 prompt 時，以下情況會返回錯誤：
+
+```bash
+# 檔案不存在
+$ JENKINS_INSPECTOR_PROMPT_FILE=/path/not/exist.md jenkee prompt
+Error: Custom prompt file not found: /path/not/exist.md
+
+# 檔案為空
+$ echo "" > /tmp/empty.md
+$ JENKINS_INSPECTOR_PROMPT_FILE=/tmp/empty.md jenkee prompt
+Error: Custom prompt file is empty: /tmp/empty.md
+
+# 無法讀取（如：是目錄而非檔案）
+$ mkdir /tmp/prompt-dir
+$ JENKINS_INSPECTOR_PROMPT_FILE=/tmp/prompt-dir jenkee prompt
+Error reading custom prompt file: ...
+```
+
 ## 注意事項
 
 1. **輸出格式** - 輸出為 markdown 格式，可用於文件生成
 2. **內容更新** - 當有新命令加入時，prompt 輸出也會更新
 3. **語言** - 目前輸出為繁體中文，專為中文使用者設計
 4. **用途** - 主要設計給 AI agent 閱讀，但人類也可參考
+5. **自訂支援** - 可透過 `~/.jenkins-inspector/prompt.md` 自訂 prompt 內容
 
 ## 設計理念
 

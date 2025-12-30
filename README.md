@@ -43,6 +43,44 @@ jenkee prompt
 
 你可以將輸出的內容複製給你的 AI assistant（如 ChatGPT、Claude），讓它更了解如何協助你使用 Jenkins Inspector。
 
+### 自訂 AI Agent Prompt
+
+如果需要自訂 prompt 內容（例如：加入團隊特定的工作流程、命名規範等），可以透過以下方式：
+
+**方式 1：使用預設位置**
+
+```bash
+# 建立自訂 prompt
+cat > ~/.jenkins-inspector/prompt.md << 'EOF'
+# 我的使用指引
+
+自訂的 prompt 內容...
+EOF
+```
+
+**方式 2：使用環境變數指定檔案位置**
+
+```bash
+# 設定環境變數
+export JENKINS_INSPECTOR_PROMPT_FILE=/path/to/my-prompt.md
+
+# 執行 prompt 命令
+jenkee prompt
+```
+
+環境變數 `JENKINS_INSPECTOR_PROMPT_FILE` 的優先級高於預設位置。
+
+**暫時忽略自訂 prompt**
+
+如果需要暫時使用預設 prompt 而不刪除自訂檔案：
+
+```bash
+# 使用 --ignore-override flag
+jenkee prompt --ignore-override
+```
+
+詳細說明請參考 [docs/examples/prompt.md](docs/examples/prompt.md)。
+
 ## 設定認證
 
 ```bash
@@ -85,21 +123,9 @@ jenkee auth
 | `stop-builds` | 停止執行中的 builds | `jenkee stop-builds <job> [job ...]` |
 | `create-job` | 建立新 job | `jenkee create-job <job> < config.xml` |
 
-### 危險命令（需要使用者確認）
-
-以下命令會對 Jenkins 進行不可逆或影響重大的操作，AI agent 在使用前必須向使用者確認：
-
-| 命令 | 說明 | 範例 |
-|------|------|------|
-| `delete-job` ⚠️ | 刪除 job（不可逆） | `jenkee delete-job <job> [job ...]` |
-| `disable-job` ⚠️ | 停用 job | `jenkee disable-job <job> [job ...]` |
-| `enable-job` ⚠️ | 啟用 job | `jenkee enable-job <job> [job ...]` |
-| `delete-builds` ⚠️ | 刪除 build 記錄（不可逆） | `jenkee delete-builds <job> <range>` |
-| `groovy` ⚠️ | 執行 Groovy script（最高風險） | `jenkee groovy <script>` |
-
-**注意**: 危險命令預設不會顯示在 `jenkee help` 中。使用 `jenkee help --ask-before-run-commands` 可以查看完整命令列表。
-
 詳細使用說明請參考 [docs/examples/](docs/examples/) 目錄下的各命令文件。
+
+進階與危險命令請參考 [README.advanced.md](README.advanced.md)。
 
 ## 主要功能
 
@@ -112,12 +138,9 @@ jenkee auth
 - 觸發 job builds（支援參數、同步與追蹤模式）
 - 停止執行中的 builds
 - 查看 build 歷史與 console 輸出
-- 刪除舊的 build 記錄（需確認）
 
 ### 3. Job 管理
 - 建立、複製、更新 job 配置
-- 刪除 jobs（需確認）
-- 停用/啟用 jobs（需確認）
 - 比較 job 配置差異
 - 將 jobs 加入 views
 
@@ -126,11 +149,9 @@ jenkee auth
 - 查看 credentials 類型與相關資訊
 - 驗證 credentials 配置
 
-### 5. 進階操作
-- 執行 Groovy scripts（需確認，最高權限）
-
 ## 文件
 
+- [README.advanced.md](README.advanced.md) - 進階與危險命令
 - [CODING_GUIDE.md](CODING_GUIDE.md) - 專案開發指南
 - [docs/examples/](docs/examples/) - 各命令使用範例
 
