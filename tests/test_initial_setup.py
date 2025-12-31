@@ -352,12 +352,16 @@ def test_complete_workflow(run_jenkee_authed):
     # 2. 探索 views
     views_result = run_jenkee_authed.run("list-views")
     views = parse_views_list(views_result.stdout)
-    assert len(views) >= 3, f"Step 2: Should have at least 3 views, got {len(views)}"
+    expected_views = {"all", "test-view", "empty-view"}
+    assert expected_views == views, \
+        f"Step 2: Expected exactly {expected_views}, got {views}"
 
     # 3. 探索所有 jobs
     all_jobs_result = run_jenkee_authed.run("list-jobs", "--all")
     all_jobs = parse_jobs_list(all_jobs_result.stdout)
-    assert len(all_jobs) >= 3, f"Step 3: Should have at least 3 jobs, got {len(all_jobs)}"
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+    assert expected_jobs == all_jobs, \
+        f"Step 3: Expected exactly {expected_jobs}, got {all_jobs}"
 
     # 4. 探索特定 view 的 jobs
     view_jobs_result = run_jenkee_authed.run("list-jobs", "test-view")
@@ -368,11 +372,11 @@ def test_complete_workflow(run_jenkee_authed):
     # 5. 查看 credentials
     creds_result = run_jenkee_authed.run("list-credentials")
     domains = parse_credentials_list(creds_result.stdout)
-    assert len(domains) > 0, "Step 5: Should have at least one credentials domain"
+    assert len(domains) == 1, f"Step 5: Should have exactly 1 domain, got {len(domains)}"
 
-    # 驗證至少有 3 個測試 credentials
+    # 驗證恰好有 3 個測試 credentials
     total_creds = sum(len(d.credentials) for d in domains)
-    assert total_creds >= 3, f"Step 5: Should have at least 3 credentials, got {total_creds}"
+    assert total_creds == 3, f"Step 5: Should have exactly 3 credentials, got {total_creds}"
 
 
 # ============================================================================
@@ -488,7 +492,9 @@ def test_output_format_clarity(run_jenkee_authed):
     # list-views: 應該是簡單的列表（每行一個 view）
     views_result = run_jenkee_authed.run("list-views")
     views = parse_views_list(views_result.stdout)
-    assert len(views) > 0, "list-views should return at least one view"
+    expected_views = {"all", "test-view", "empty-view"}
+    assert views == expected_views, \
+        f"list-views should return exactly {expected_views}, got {views}"
 
     # 驗證每個 view 名稱都是單一詞彙（不含空格或複雜格式）
     for view in views:
@@ -498,7 +504,9 @@ def test_output_format_clarity(run_jenkee_authed):
     # list-jobs: 應該是簡單的列表（每行一個 job）
     jobs_result = run_jenkee_authed.run("list-jobs", "--all")
     jobs = parse_jobs_list(jobs_result.stdout)
-    assert len(jobs) > 0, "list-jobs should return at least one job"
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+    assert jobs == expected_jobs, \
+        f"list-jobs should return exactly {expected_jobs}, got {jobs}"
 
     # 驗證每個 job 名稱都是單一詞彙
     for job in jobs:
@@ -508,11 +516,13 @@ def test_output_format_clarity(run_jenkee_authed):
     # list-credentials: 應該有結構化的輸出
     creds_result = run_jenkee_authed.run("list-credentials")
     domains = parse_credentials_list(creds_result.stdout)
-    assert len(domains) > 0, "list-credentials should return at least one domain"
+    assert len(domains) == 1, \
+        f"list-credentials should return exactly 1 domain, got {len(domains)}"
 
-    # 驗證 domain 中有 credentials
+    # 驗證 domain 中有恰好 3 個 credentials
     total_creds = sum(len(d.credentials) for d in domains)
-    assert total_creds > 0, "Should have at least one credential"
+    assert total_creds == 3, \
+        f"Should have exactly 3 credentials, got {total_creds}"
 
     # 驗證每個 credential 都有必要的欄位
     for domain in domains:
