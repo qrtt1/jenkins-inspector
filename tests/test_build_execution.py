@@ -181,6 +181,65 @@ def parse_console_output(stdout: str) -> str:
     return stdout.strip()
 
 
+@dataclass
+class StopBuildsResult:
+    """Stop-builds 指令執行結果的結構化資料"""
+    success: bool
+    job_names: List[str]
+    stopped_count: int
+    raw_output: str
+
+
+def parse_stop_builds_result(stdout: str, stderr: str, returncode: int) -> StopBuildsResult:
+    """
+    解析 stop-builds 命令的輸出
+
+    預期格式範例：
+    - 單一 job：
+        "✓ Stopped all running builds for job 'long-running-job'"
+
+    - 多個 jobs：
+        "✓ Stopped all running builds for 2 job(s)"
+        "  - long-running-job"
+        "  - another-job"
+
+    Returns:
+        StopBuildsResult: 結構化的 stop-builds 執行結果
+    """
+    output = stdout + stderr
+    success = returncode == 0
+
+    job_names = []
+    stopped_count = 0
+
+    # 提取 job 名稱（多種格式）
+    # 格式1: "job 'long-running-job'"
+    single_job_match = re.search(r"job\s+'([^']+)'", output)
+    if single_job_match:
+        job_names.append(single_job_match.group(1))
+        stopped_count = 1
+    else:
+        # 格式2: 多個 jobs，從列表中提取
+        # "  - job-name"
+        job_list_matches = re.findall(r'^\s*-\s+(\S+)', output, re.MULTILINE)
+        if job_list_matches:
+            job_names.extend(job_list_matches)
+
+        # 嘗試提取停止的 job 數量
+        count_match = re.search(r'(\d+)\s+job\(s\)', output)
+        if count_match:
+            stopped_count = int(count_match.group(1))
+        else:
+            stopped_count = len(job_names)
+
+    return StopBuildsResult(
+        success=success,
+        job_names=job_names,
+        stopped_count=stopped_count,
+        raw_output=output
+    )
+
+
 # ============================================================================
 # 測試函數 - Build 指令
 # ============================================================================
@@ -434,3 +493,119 @@ def test_complete_build_workflow(run_jenkee_authed):
 
     # 5. 驗證整個流程順利完成
     assert True, "Complete build workflow executed successfully"
+
+
+# ============================================================================
+# 測試函數 - Stop-Builds 指令
+# ============================================================================
+
+
+def test_stop_builds_basic(run_jenkee_authed):
+    """
+    測試停止執行中的 Builds
+
+    對應 test plan 步驟 8
+    """
+    import time
+    import subprocess
+
+    # Arrange: 先觸發一個長時間執行的 build（不等待完成）
+    # 使用 fire-and-forget 模式，這樣它會開始執行但不會阻塞
+    trigger_result = run_jenkee_authed.run("build", "long-running-job")
+    assert trigger_result.returncode == 0, "Should trigger build successfully"
+
+    # 等待一小段時間讓 build 開始執行（避免還在 queue 中）
+    time.sleep(3)
+
+    # Act: 執行 stop-builds 指令
+    result = run_jenkee_authed.run("stop-builds", "long-running-job")
+
+    # Parse: 解析輸出
+    stop_result = parse_stop_builds_result(result.stdout, result.stderr, result.returncode)
+
+    # Assert: 驗證執行成功
+    assert stop_result.success, f"stop-builds should succeed, got: {stop_result.raw_output}"
+    assert "long-running-job" in stop_result.job_names or "long-running-job" in stop_result.raw_output, \
+        f"Should reference the job name, got: {stop_result.raw_output}"
+
+
+def test_verify_stopped_build_status(run_jenkee_authed):
+    """
+    測試驗證停止的 Build 狀態
+
+    對應 test plan 步驟 9
+    """
+    import time
+
+    # Arrange: 先觸發一個長時間執行的 build
+    trigger_result = run_jenkee_authed.run("build", "long-running-job")
+    assert trigger_result.returncode == 0, "Should trigger build successfully"
+
+    # 等待 build 開始執行
+    time.sleep(3)
+
+    # Act: 停止 build
+    stop_result = run_jenkee_authed.run("stop-builds", "long-running-job")
+    assert stop_result.returncode == 0, "Should stop build successfully"
+
+    # 等待一小段時間讓 Jenkins 更新狀態
+    time.sleep(2)
+
+    # 驗證：查看 build 歷史
+    list_result = run_jenkee_authed.run("list-builds", "long-running-job")
+    builds = parse_builds_list(list_result.stdout)
+
+    # Assert: 驗證最新的 build 狀態為 ABORTED
+    assert len(builds) > 0, "Should have at least one build"
+
+    # 找出最新的 build（編號最大的）
+    latest_build = max(builds, key=lambda b: b.number)
+
+    # 驗證狀態為 ABORTED（可能需要等待一段時間讓狀態更新）
+    # 如果狀態還是 BUILDING，再等一下
+    if latest_build.status == 'BUILDING':
+        time.sleep(2)
+        list_result = run_jenkee_authed.run("list-builds", "long-running-job")
+        builds = parse_builds_list(list_result.stdout)
+        latest_build = max(builds, key=lambda b: b.number)
+
+    assert latest_build.status == 'ABORTED', \
+        f"Latest build should be ABORTED, got {latest_build.status}"
+
+
+def test_stop_builds_nonexistent_job(run_jenkee_authed):
+    """
+    測試停止不存在 Job 的 Builds
+
+    對應 test plan 錯誤情境測試
+    """
+    # Arrange: 使用不存在的 job 名稱
+
+    # Act: 執行 stop-builds 指令並允許失敗
+    result = run_jenkee_authed.build_command("stop-builds", "non-existent-job").allow_failure().run()
+
+    # Assert: 驗證失敗
+    assert result.returncode != 0, "Should fail for non-existent job"
+    error_output = (result.stdout + result.stderr).lower()
+    assert 'error' in error_output or 'not found' in error_output or 'does not exist' in error_output, \
+        f"Should have error message, got: {result.stdout + result.stderr}"
+
+
+def test_stop_builds_no_running_builds(run_jenkee_authed):
+    """
+    測試停止沒有執行中 Builds 的 Job
+
+    對應 test plan 錯誤情境測試
+    """
+    # Arrange: 使用一個確定沒有執行中 builds 的 job
+    # test-job-1 通常是空的快速 job，應該不會有執行中的 builds
+
+    # Act: 執行 stop-builds 指令
+    # 這個操作應該成功，但可能沒有實際停止任何 build
+    result = run_jenkee_authed.run("stop-builds", "test-job-1")
+
+    # Parse: 解析輸出
+    stop_result = parse_stop_builds_result(result.stdout, result.stderr, result.returncode)
+
+    # Assert: 驗證執行成功（即使沒有 builds 需要停止）
+    assert stop_result.success, f"stop-builds should succeed even with no running builds"

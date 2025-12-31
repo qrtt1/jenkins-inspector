@@ -34,7 +34,7 @@ def test_list_jobs_all(run_jenkee_authed):
     assert result.returncode == 0
 
     jobs = parse_job_list(result.stdout)
-    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3", "long-running-job"}
 
     assert jobs == expected_jobs, f"Expected {expected_jobs}, but got {jobs}"
 
@@ -50,7 +50,7 @@ def test_list_jobs_all_short_flag(run_jenkee_authed):
     assert result.returncode == 0
 
     jobs = parse_job_list(result.stdout)
-    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3", "long-running-job"}
 
     assert jobs == expected_jobs, f"Expected {expected_jobs}, but got {jobs}"
 

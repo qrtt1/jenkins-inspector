@@ -1,6 +1,7 @@
 import jenkins.model.Jenkins
 import hudson.model.FreeStyleProject
 import hudson.model.ListView
+import hudson.tasks.Shell
 
 def jenkins = Jenkins.get()
 
@@ -13,7 +14,17 @@ jobNames.each { name ->
     }
 }
 
-// 2. 建立測試用的 View 並加入 Jobs
+// 2. 建立 long-running-job（用於測試 stop-builds）
+def longJobName = "long-running-job"
+if (jenkins.getItem(longJobName) == null) {
+    def longJob = jenkins.createProject(FreeStyleProject, longJobName)
+    // 加入 shell script build step: sleep 60
+    longJob.buildersList.add(new Shell("echo 'Starting long running job...'\nsleep 60\necho 'Job completed'"))
+    longJob.save()
+    println "Created job: ${longJobName} (with sleep 60)"
+}
+
+// 3. 建立測試用的 View 並加入 Jobs
 def viewName = "test-view"
 def view = jenkins.getView(viewName)
 if (view == null) {
@@ -31,7 +42,7 @@ if (view == null) {
     }
 }
 
-// 3. 建立另一個空的 View
+// 4. 建立另一個空的 View
 def emptyViewName = "empty-view"
 if (jenkins.getView(emptyViewName) == null) {
     def emptyView = new ListView(emptyViewName, jenkins)

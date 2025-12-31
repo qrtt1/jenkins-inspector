@@ -359,7 +359,7 @@ def test_complete_workflow(run_jenkee_authed):
     # 3. 探索所有 jobs
     all_jobs_result = run_jenkee_authed.run("list-jobs", "--all")
     all_jobs = parse_jobs_list(all_jobs_result.stdout)
-    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3", "long-running-job"}
     assert expected_jobs == all_jobs, \
         f"Step 3: Expected exactly {expected_jobs}, got {all_jobs}"
 
@@ -504,7 +504,7 @@ def test_output_format_clarity(run_jenkee_authed):
     # list-jobs: 應該是簡單的列表（每行一個 job）
     jobs_result = run_jenkee_authed.run("list-jobs", "--all")
     jobs = parse_jobs_list(jobs_result.stdout)
-    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3", "long-running-job"}
     assert jobs == expected_jobs, \
         f"list-jobs should return exactly {expected_jobs}, got {jobs}"
 
