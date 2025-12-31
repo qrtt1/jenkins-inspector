@@ -1,13 +1,13 @@
 # 測試執行報告
 
-## 執行日期
-2025-12-29
+## 最新更新
+2025-12-31
 
 ## 測試環境
 - Python: 3.12.12
 - Docker: 28.5.2
-- OS: macOS (Darwin 23.4.0)
-- Branch: chore/test-plan
+- OS: macOS (Darwin 24.6.0)
+- Branch: feature/test-list-jobs
 
 ## 測試結果摘要
 
@@ -17,10 +17,10 @@ pytest -v tests/
 ```
 
 **結果**：✅ 全部通過
-- 測試總數：17 個
-- 通過：17 個
+- 測試總數：32 個
+- 通過：32 個
 - 失敗：0 個
-- 執行時間：7.74 秒（第二次執行，Jenkins container 已快取）
+- 執行時間：約 10-11 秒（第二次執行，Jenkins container 已快取）
 
 ### 測試覆蓋範圍
 
@@ -32,14 +32,37 @@ pytest -v tests/
   - ✅ Timeout 設定
   - ✅ 冪等性測試
 
+- `list-jobs` - 5 個測試 ✅ **新增**
+  - ✅ 列出所有 jobs（--all flag）
+  - ✅ 列出所有 jobs（-a 簡寫）
+  - ✅ 列出特定 view 中的 jobs
+  - ✅ 列出空 view
+  - ✅ 缺少參數的錯誤處理
+
+- `prompt` - 8 個測試
+  - ✅ 預設 prompt 輸出
+  - ✅ 自訂 prompt 檔案覆蓋
+  - ✅ 檔案讀取失敗處理
+  - ✅ 空檔案錯誤處理
+  - ✅ 檔案不存在錯誤處理
+  - ✅ 環境變數優先級
+  - ✅ --ignore-override flag
+  - ✅ 無自訂檔案時的 --ignore-override
+
 #### 測試範例（test_example.py）
-- 11 個範例測試展示各種測試模式：
+- 12 個範例測試展示各種測試模式：
   - Jenkins API 直接呼叫
   - Jenkee 命令執行
   - 輸出驗證
   - Timeout 處理
   - 失敗情境測試
   - Builder pattern 用法
+  - Jenkins logs 檢查
+
+#### 測試輔助工具（test_jenkins_logs_helper.py）
+- 2 個輔助測試：
+  - ✅ 查看 Jenkins init script 執行結果
+  - ✅ 展示分離 stdout/stderr 的用法
 
 ### 第一次執行注意事項
 
@@ -139,12 +162,32 @@ pip install -e ".[dev]"
 2. **效能測試**：可以加入效能測試驗證命令執行時間
 3. **錯誤訊息測試**：可以加入更多錯誤情境的訊息格式驗證
 
+## 測試基礎建設改進（2025-12-31）
+
+### 新增功能
+1. **Jenkins Fixture 增強**
+   - 新增 `01-create-test-jobs.groovy` fixture script
+   - 自動建立測試用 jobs 和 views
+   - 加入驗證邏輯確保 fixture 正確執行
+
+2. **Logging 功能改進**
+   - 改用 testcontainers 原生 `get_logs()` API
+   - 新增 `get_logs()` 方法回傳 `(stdout, stderr)` tuple
+   - 新增 `get_logs_combined(mark_streams=False)` 支援 stream 標示
+   - 測試結束時自動輸出完整 logs（含 stream 標記）
+   - 改進 `assert_no_errors_in_logs()` 過濾已知無害訊息
+
+3. **測試 Assertion 改進**
+   - 新增 `parse_job_list()` helper 解析命令輸出
+   - 使用精準的集合比對取代字串包含檢查
+   - 提供清楚的錯誤訊息顯示預期與實際的差異
+
 ## 後續測試計畫
 
 根據 docs/test-plan-for-*.md 文件，建議依序實作以下測試：
 
-1. **test_list_views.py** - 列出 views
-2. **test_list_jobs.py** - 列出 jobs
+1. ~~**test_list_jobs.py** - 列出 jobs~~ ✅ **已完成** (2025-12-31)
+2. **test_list_views.py** - 列出 views
 3. **test_get_job.py** - 取得 job 配置
 4. **test_build.py** - 觸發 build（包含參數、同步、追蹤模式）
 5. **test_list_builds.py** - 列出 build 歷史
@@ -154,7 +197,7 @@ pip install -e ".[dev]"
 每個測試應該涵蓋：
 - ✅ 成功情境
 - ✅ 失敗情境
-- ✅ 輸出格式驗證
+- ✅ 輸出格式驗證（使用精準比對）
 - ✅ 邊界情況
 
 ## 結論
