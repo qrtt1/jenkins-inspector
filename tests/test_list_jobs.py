@@ -26,33 +26,39 @@ def test_list_jobs_all(run_jenkee_authed):
     """測試列出所有 Jobs（使用 --all）"""
     # Arrange: 透過 run_jenkee_authed 確保已認證且 Jenkins 已啟動
     # 初始化腳本 01-create-test-jobs.groovy 應該已經建立了測試 Job
+    # 注意：其他測試可能會建立額外的 jobs
 
     # Act: 執行 list-jobs --all 指令
     result = run_jenkee_authed.run("list-jobs", "--all")
 
-    # Assert: 驗證執行成功且精準比對 job 列表
+    # Assert: 驗證執行成功且至少包含初始的 jobs
     assert result.returncode == 0
 
     jobs = parse_job_list(result.stdout)
     expected_jobs = {"test-job-1", "test-job-2", "test-job-3", "long-running-job"}
 
-    assert jobs == expected_jobs, f"Expected {expected_jobs}, but got {jobs}"
+    # 使用 issubset 而非精確相等，因為其他測試可能會建立更多 jobs
+    assert expected_jobs.issubset(jobs), \
+        f"Expected at least {expected_jobs}, but got {jobs}"
 
 
 def test_list_jobs_all_short_flag(run_jenkee_authed):
     """測試列出所有 Jobs（使用 -a 簡寫）"""
     # Arrange: 透過 run_jenkee_authed 確保已認證且 Jenkins 已啟動
+    # 注意：其他測試可能會建立額外的 jobs
 
     # Act: 執行 list-jobs -a 指令
     result = run_jenkee_authed.run("list-jobs", "-a")
 
-    # Assert: 驗證執行成功且精準比對 job 列表
+    # Assert: 驗證執行成功且至少包含初始的 jobs
     assert result.returncode == 0
 
     jobs = parse_job_list(result.stdout)
     expected_jobs = {"test-job-1", "test-job-2", "test-job-3", "long-running-job"}
 
-    assert jobs == expected_jobs, f"Expected {expected_jobs}, but got {jobs}"
+    # 使用 issubset 而非精確相等，因為其他測試可能會建立更多 jobs
+    assert expected_jobs.issubset(jobs), \
+        f"Expected at least {expected_jobs}, but got {jobs}"
 
 
 def test_list_jobs_specific_view(run_jenkee_authed):

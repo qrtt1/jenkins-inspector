@@ -244,6 +244,7 @@ class JenkeeCommandBuilder:
         .with_timeout(seconds) - 設定執行逾時
         .allow_failure()       - 允許失敗（不做斷言）
         .must_fail()          - 必須失敗（斷言 returncode != 0）
+        .with_stdin(input)    - 提供 stdin 輸入
     """
 
     def __init__(self, jenkins_env: dict, command: str, *args):
@@ -252,6 +253,7 @@ class JenkeeCommandBuilder:
         self._args = list(args)
         self._check = True
         self._timeout: int | None = None
+        self._stdin_input: str | None = None
 
     def with_timeout(self, timeout: int) -> "JenkeeCommandBuilder":
         """設定執行逾時（秒）"""
@@ -266,6 +268,11 @@ class JenkeeCommandBuilder:
     def must_fail(self) -> "JenkeeCommandBuilder":
         """斷言指令必須失敗（returncode != 0）"""
         self._check = "must_fail"
+        return self
+
+    def with_stdin(self, stdin_input: str) -> "JenkeeCommandBuilder":
+        """提供 stdin 輸入"""
+        self._stdin_input = stdin_input
         return self
 
     def run(self):
@@ -286,6 +293,7 @@ class JenkeeCommandBuilder:
             cmd,
             capture_output=True,
             text=True,
+            input=self._stdin_input,
             env=self._jenkins_env,
             timeout=self._timeout,
         )
