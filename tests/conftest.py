@@ -134,8 +134,33 @@ def jenkins_container(jenkins_init_dir: Path) -> Generator[DockerContainer, None
 
     這個 fixture 在整個測試 session 中只會啟動一次 Jenkins，
     多個測試可以共用同一個 Jenkins instance 以加快測試速度。
+
+    使用自訂 Docker image（從 fixtures/Dockerfile 建立），包含：
+    - credentials plugin
+    - plain-credentials plugin
+    - credentials-binding plugin
     """
-    jenkins = DockerContainer("jenkins/jenkins:lts")
+    import subprocess
+
+    # 建立自訂的 Jenkins image（包含 credentials plugins）
+    dockerfile_path = jenkins_init_dir / "Dockerfile"
+    if dockerfile_path.exists():
+        # 使用 subprocess 建立 image
+        build_result = subprocess.run(
+            ["docker", "build", "-t", "jenkins-with-credentials:test", str(jenkins_init_dir)],
+            capture_output=True,
+            text=True
+        )
+        if build_result.returncode != 0:
+            print(f"Warning: Failed to build custom Jenkins image: {build_result.stderr}")
+            # 如果建立失敗，fallback 到標準 image
+            image_name = "jenkins/jenkins:lts-jdk17"
+        else:
+            image_name = "jenkins-with-credentials:test"
+    else:
+        image_name = "jenkins/jenkins:lts-jdk17"
+
+    jenkins = DockerContainer(image_name)
     jenkins.with_env("JAVA_OPTS", "-Djenkins.install.runSetupWizard=false")
     jenkins.with_exposed_ports(8080)
     jenkins.waiting_for(LogMessageWaitStrategy("Jenkins is fully up and running"))
