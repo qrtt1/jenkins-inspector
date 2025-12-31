@@ -96,5 +96,7 @@ def test_jenkee_with_subprocess_directly(jenkins_env):
 
 def test_jenkins_logs_check(jenkins_instance):
     """範例：檢查 Jenkins container logs"""
-    logs = jenkins_instance.get_logs()
+    # get_logs() 回傳 (stdout, stderr) tuple
+    # 使用 get_logs_combined() 取得合併的 logs
+    logs = jenkins_instance.get_logs_combined()
     assert "Jenkins is fully up and running" in logs

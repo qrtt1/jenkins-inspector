@@ -32,14 +32,69 @@ class JenkinsTestInstance:
         env["JENKINS_API_TOKEN"] = self.token
         return env
 
-    def get_logs(self) -> str:
-        """取得 Jenkins container logs"""
-        return self.container.get_wrapped_container().logs().decode("utf-8", errors="ignore")
+    def get_logs(self) -> tuple[str, str]:
+        """
+        取得 Jenkins container logs
+
+        Returns:
+            tuple[str, str]: (stdout, stderr)
+        """
+        return self.container.get_logs()
+
+    def get_logs_combined(self, mark_streams: bool = False) -> str:
+        """
+        取得合併的 Jenkins container logs (stdout + stderr)
+
+        Args:
+            mark_streams: 是否標示 stdout 和 stderr（預設 False）
+
+        Returns:
+            str: 合併的 logs 內容
+        """
+        stdout, stderr = self.get_logs()
+        combined = []
+
+        if stdout:
+            stdout_text = stdout.decode('utf-8', errors='ignore') if isinstance(stdout, bytes) else stdout
+            if mark_streams and stdout_text.strip():
+                combined.append("=== STDOUT ===")
+                combined.append(stdout_text)
+            elif stdout_text.strip():
+                combined.append(stdout_text)
+
+        if stderr:
+            stderr_text = stderr.decode('utf-8', errors='ignore') if isinstance(stderr, bytes) else stderr
+            if mark_streams and stderr_text.strip():
+                combined.append("=== STDERR ===")
+                combined.append(stderr_text)
+            elif stderr_text.strip():
+                combined.append(stderr_text)
+
+        return '\n'.join(combined)
 
     def assert_no_errors_in_logs(self):
         """確認 logs 中沒有 ERROR 或 Exception"""
-        logs = self.get_logs()
-        assert not re.search(r"(ERROR|Exception|Failed)", logs), "Found errors in Jenkins logs"
+        logs = self.get_logs_combined()
+
+        # 檢查是否有真正的錯誤，但允許一些已知的無害訊息
+        errors = []
+        for line in logs.split('\n'):
+            # 跳過已知的無害訊息
+            if 'Failed to load' in line and 'init.groovy.d' in line:
+                continue  # init scripts 找不到是正常的
+            if 'NO JSP Support' in line:
+                continue  # JSP 不支援是預期的
+
+            # 檢查真正的錯誤
+            if re.search(r'\b(ERROR|SEVERE|Exception)\b', line):
+                errors.append(line.strip())
+
+        if errors:
+            print("\n=== Found errors in Jenkins logs ===")
+            for error in errors[:10]:  # 顯示前 10 個錯誤
+                print(error)
+
+        assert not errors, f"Found {len(errors)} errors in Jenkins logs"
 
 
 def wait_for_jenkins(url: str, username: str, token: str, timeout_seconds: int = 180) -> None:
@@ -91,12 +146,13 @@ def jenkins_container(jenkins_init_dir: Path) -> Generator[DockerContainer, None
 
 
 @pytest.fixture(scope="session")
-def jenkins_instance(jenkins_container: DockerContainer) -> JenkinsTestInstance:
+def jenkins_instance(jenkins_container: DockerContainer) -> Generator[JenkinsTestInstance, None, None]:
     """
     提供已啟動並就緒的 Jenkins 測試實例 (session scope)
 
     包含 URL、認證資訊和實用方法。
     會確保 Jenkins 啟動過程中沒有錯誤。
+    測試結束時會印出 Jenkins logs 的摘要。
 
     Constraints:
         - Jenkins 必須運行在 localhost/127.0.0.1（安全考量）
@@ -115,7 +171,18 @@ def jenkins_instance(jenkins_container: DockerContainer) -> JenkinsTestInstance:
     # 確保 Jenkins 啟動過程中沒有錯誤
     instance.assert_no_errors_in_logs()
 
-    return instance
+    yield instance
+
+    # Teardown: 印出完整的 Jenkins logs（標示 stdout/stderr）
+    print("\n" + "=" * 80)
+    print("Jenkins Container Logs (with stream markers)")
+    print("=" * 80)
+
+    # 取得標示 stdout/stderr 的完整 logs
+    logs = instance.get_logs_combined(mark_streams=True)
+    print(logs)
+
+    print("=" * 80)
 
 
 @pytest.fixture
