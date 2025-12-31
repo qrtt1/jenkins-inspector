@@ -118,23 +118,7 @@ jenkee list-builds test-simple-job
 - [ ] 輸出格式清晰
 - [ ] 包含 build 編號與狀態
 
-### 6. 列出最近 N 個 Builds
-
-```bash
-jenkee list-builds test-simple-job --limit 5
-```
-
-**預期結果**：
-- Exit code: 0
-- 只顯示最近 5 個 builds
-- 結果正確限制數量
-
-**驗證點**：
-- [ ] 成功限制輸出數量
-- [ ] 顯示正確的 builds
-- [ ] 輸出格式正確
-
-### 7. 取得最新 Build 的 Console 輸出
+### 6. 取得最新 Build 的 Console 輸出
 
 ```bash
 jenkee console test-simple-job
@@ -150,7 +134,7 @@ jenkee console test-simple-job
 - [ ] 輸出內容完整
 - [ ] 格式正確
 
-### 8. 取得特定 Build 的 Console 輸出
+### 7. 取得特定 Build 的 Console 輸出
 
 ```bash
 jenkee console test-simple-job 1
@@ -166,7 +150,7 @@ jenkee console test-simple-job 1
 - [ ] 輸出內容正確
 - [ ] 格式清晰
 
-### 9. 停止執行中的 Builds
+### 8. 停止執行中的 Builds
 
 ```bash
 # 先觸發一個長時間執行的 build
@@ -189,10 +173,10 @@ jenkee stop-builds long-running-job
 - [ ] Builds 狀態變為 ABORTED
 - [ ] 顯示成功訊息
 
-### 10. 驗證停止結果
+### 9. 驗證停止結果
 
 ```bash
-jenkee list-builds long-running-job --limit 1
+jenkee list-builds long-running-job
 ```
 
 **預期結果**：
@@ -237,7 +221,7 @@ done
 jenkee build long-job
 
 # 2. 定期檢查狀態
-watch -n 10 'jenkee list-builds long-job --limit 1'
+watch -n 10 'jenkee list-builds long-job'
 
 # 3. 如果需要，查看即時輸出
 jenkee console long-job
@@ -247,7 +231,7 @@ jenkee console long-job
 
 ```bash
 # 1. 列出最近的 builds 找出失敗的
-jenkee list-builds my-job --limit 10
+jenkee list-builds my-job
 
 # 2. 查看失敗 build 的 console 輸出
 jenkee console my-job 42
@@ -273,7 +257,7 @@ jenkee console deploy-job | grep "Deploying version 1.2.3 to staging"
 jenkee stop-builds critical-job
 
 # 驗證停止結果
-jenkee list-builds critical-job --limit 5
+jenkee list-builds critical-job
 ```
 
 ## 錯誤情境測試
@@ -334,7 +318,6 @@ jenkee stop-builds idle-job
 
 - `build -f` 模式會持續連接 Jenkins，適合即時監控
 - `build -s` 模式會輪詢 build 狀態，適合自動化腳本
-- `list-builds` 使用 `--limit` 可以提升查詢速度
 - `console` 可能返回大量輸出，建議搭配 `grep` 或導向檔案
 
 ## 注意事項

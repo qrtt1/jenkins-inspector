@@ -41,7 +41,10 @@ class ListBuildsCommand(Command):
 def job = hudson.model.Hudson.instance.getItemByFullName('{job_name}')
 if (job) {{
   job.builds.each {{ build ->
-    println "${{build.number}}"
+    def result = build.result ? build.result.toString() : 'BUILDING'
+    def timestamp = build.time.format('yyyy-MM-dd HH:mm:ss')
+    def duration = build.duration / 1000  // 轉換為秒
+    println "#${{build.number}} ${{result}} ${{timestamp}} ${{duration}}s"
   }}
 }} else {{
   println "ERROR: Job not found"
