@@ -1,6 +1,27 @@
 """測試 list-jobs 命令"""
 
 
+def parse_job_list(output: str) -> set[str]:
+    """
+    解析 list-jobs 命令的輸出，取得 job 名稱列表
+
+    Args:
+        output: list-jobs 命令的 stdout
+
+    Returns:
+        set[str]: job 名稱的集合
+    """
+    # 過濾空行和特殊訊息
+    lines = output.strip().split('\n')
+    jobs = set()
+    for line in lines:
+        line = line.strip()
+        # 跳過空行和錯誤訊息
+        if line and not line.startswith('No jobs found') and not line.startswith('Error'):
+            jobs.add(line)
+    return jobs
+
+
 def test_list_jobs_all(run_jenkee_authed):
     """測試列出所有 Jobs（使用 --all）"""
     # Arrange: 透過 run_jenkee_authed 確保已認證且 Jenkins 已啟動
@@ -9,11 +30,13 @@ def test_list_jobs_all(run_jenkee_authed):
     # Act: 執行 list-jobs --all 指令
     result = run_jenkee_authed.run("list-jobs", "--all")
 
-    # Assert: 驗證執行成功且包含預期的 Job 名稱
+    # Assert: 驗證執行成功且精準比對 job 列表
     assert result.returncode == 0
-    assert "test-job-1" in result.stdout
-    assert "test-job-2" in result.stdout
-    assert "test-job-3" in result.stdout
+
+    jobs = parse_job_list(result.stdout)
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+
+    assert jobs == expected_jobs, f"Expected {expected_jobs}, but got {jobs}"
 
 
 def test_list_jobs_all_short_flag(run_jenkee_authed):
@@ -23,11 +46,13 @@ def test_list_jobs_all_short_flag(run_jenkee_authed):
     # Act: 執行 list-jobs -a 指令
     result = run_jenkee_authed.run("list-jobs", "-a")
 
-    # Assert: 驗證執行成功且包含預期的 Job 名稱
+    # Assert: 驗證執行成功且精準比對 job 列表
     assert result.returncode == 0
-    assert "test-job-1" in result.stdout
-    assert "test-job-2" in result.stdout
-    assert "test-job-3" in result.stdout
+
+    jobs = parse_job_list(result.stdout)
+    expected_jobs = {"test-job-1", "test-job-2", "test-job-3"}
+
+    assert jobs == expected_jobs, f"Expected {expected_jobs}, but got {jobs}"
 
 
 def test_list_jobs_specific_view(run_jenkee_authed):
@@ -37,12 +62,13 @@ def test_list_jobs_specific_view(run_jenkee_authed):
     # Act: 執行 list-jobs test-view 指令
     result = run_jenkee_authed.run("list-jobs", "test-view")
 
-    # Assert: 驗證執行成功且只包含該 view 中的 jobs
+    # Assert: 驗證執行成功且精準比對 job 列表
     assert result.returncode == 0
-    assert "test-job-1" in result.stdout
-    assert "test-job-2" in result.stdout
-    # test-job-3 不在 test-view 中，不應該出現
-    assert "test-job-3" not in result.stdout
+
+    jobs = parse_job_list(result.stdout)
+    expected_jobs = {"test-job-1", "test-job-2"}
+
+    assert jobs == expected_jobs, f"Expected {expected_jobs}, but got {jobs}"
 
 
 def test_list_jobs_empty_view(run_jenkee_authed):
@@ -52,12 +78,13 @@ def test_list_jobs_empty_view(run_jenkee_authed):
     # Act: 執行 list-jobs empty-view 指令
     result = run_jenkee_authed.run("list-jobs", "empty-view")
 
-    # Assert: 驗證執行成功但沒有 job 輸出
+    # Assert: 驗證執行成功且 job 列表為空
     assert result.returncode == 0
-    # 空 view 應該沒有任何 test-job 出現
-    assert "test-job-1" not in result.stdout
-    assert "test-job-2" not in result.stdout
-    assert "test-job-3" not in result.stdout
+
+    jobs = parse_job_list(result.stdout)
+    expected_jobs = set()
+
+    assert jobs == expected_jobs, f"Expected empty set, but got {jobs}"
 
 
 def test_list_jobs_missing_argument(run_jenkee_authed):
