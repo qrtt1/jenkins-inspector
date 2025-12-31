@@ -144,23 +144,22 @@ def jenkins_container(jenkins_init_dir: Path) -> Generator[DockerContainer, None
 
     # 建立自訂的 Jenkins image（包含 credentials plugins）
     dockerfile_path = jenkins_init_dir / "Dockerfile"
-    if dockerfile_path.exists():
-        # 使用 subprocess 建立 image
-        build_result = subprocess.run(
-            ["docker", "build", "-t", "jenkins-with-credentials:test", str(jenkins_init_dir)],
-            capture_output=True,
-            text=True
-        )
-        if build_result.returncode != 0:
-            print(f"Warning: Failed to build custom Jenkins image: {build_result.stderr}")
-            # 如果建立失敗，fallback 到標準 image
-            image_name = "jenkins/jenkins:lts-jdk17"
-        else:
-            image_name = "jenkins-with-credentials:test"
-    else:
-        image_name = "jenkins/jenkins:lts-jdk17"
+    assert dockerfile_path.exists(), f"Dockerfile not found at {dockerfile_path}"
 
-    jenkins = DockerContainer(image_name)
+    # 使用 subprocess 建立 image
+    build_result = subprocess.run(
+        ["docker", "build", "-t", "jenkins-inspector:test", str(jenkins_init_dir)],
+        capture_output=True,
+        text=True
+    )
+
+    assert build_result.returncode == 0, (
+        f"Failed to build Jenkins image:\n"
+        f"stdout: {build_result.stdout}\n"
+        f"stderr: {build_result.stderr}"
+    )
+
+    jenkins = DockerContainer("jenkins-inspector:test")
     jenkins.with_env("JAVA_OPTS", "-Djenkins.install.runSetupWizard=false")
     jenkins.with_exposed_ports(8080)
     jenkins.waiting_for(LogMessageWaitStrategy("Jenkins is fully up and running"))
