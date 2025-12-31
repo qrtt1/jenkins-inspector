@@ -359,8 +359,49 @@ pytest -v -s tests/test_auth.py
 
 ## 範例：撰寫新的測試檔案
 
+**重要原則**：
+1. 為每個命令建立專用的 parser function
+2. 將輸出解析為結構化的資料（dataclass、Set、List 等）
+3. 使用精確比對，避免 `"str" in output` 這種不精確的檢查
+4. Parser function 應該有清楚的 docstring 說明預期格式
+
 ```python
 # tests/test_list_views.py
+from typing import Set
+from dataclasses import dataclass
+
+
+# ============================================================================
+# Parser Functions - 將命令輸出解析為可精確比對的資料結構
+# ============================================================================
+
+def parse_views_list(stdout: str) -> Set[str]:
+    """
+    解析 list-views 命令的輸出
+
+    預期格式：每行一個 view 名稱
+    例如：
+        all
+        test-view
+        production-view
+
+    Returns:
+        Set[str]: view 名稱的集合
+    """
+    lines = stdout.strip().split('\n')
+    views = set()
+
+    for line in lines:
+        line = line.strip()
+        if line:  # 跳過空行
+            views.add(line)
+
+    return views
+
+
+# ============================================================================
+# 測試函數
+# ============================================================================
 
 def test_list_views_success(run_jenkee):
     """測試成功列出 views"""
@@ -369,21 +410,29 @@ def test_list_views_success(run_jenkee):
     # Act: 執行 list-views 指令
     result = run_jenkee.run("list-views")
 
-    # Assert: 驗證執行成功
+    # Parse: 解析輸出
+    views = parse_views_list(result.stdout)
+
+    # Assert: 驗證執行成功並包含預期的 views
     assert result.returncode == 0
-    assert result.stdout  # 應該有輸出
+    assert len(views) > 0, "Should have at least one view"
+    assert "all" in views, "Should contain 'all' view"
 
 
-def test_list_views_with_format(run_jenkee):
-    """測試 list-views 支援 format 參數"""
-    # Arrange: 準備使用 --format 參數
+def test_list_views_contains_expected_views(run_jenkee):
+    """測試 views 列表包含所有預期的 views"""
+    # Arrange: 預期應該存在的 views
+    expected_views = {"all", "test-view"}
 
-    # Act: 執行帶參數的指令
-    result = run_jenkee.run("list-views", "--format", "json")
+    # Act: 執行 list-views 指令
+    result = run_jenkee.run("list-views")
 
-    # Assert: 驗證輸出格式
-    assert result.returncode == 0
-    # 驗證 JSON 格式...
+    # Parse: 解析輸出
+    views = parse_views_list(result.stdout)
+
+    # Assert: 精確驗證包含預期的 views
+    assert expected_views.issubset(views), \
+        f"Expected {expected_views} to be in {views}"
 
 
 def test_list_views_with_wrong_auth(run_jenkee_bad_auth):
@@ -395,6 +444,104 @@ def test_list_views_with_wrong_auth(run_jenkee_bad_auth):
 
     # Assert: 驗證失敗
     assert result.returncode != 0
+
+    # Parse & Verify: 不應該有任何 views（因為認證失敗）
+    # 如果有輸出，解析它來驗證
+    if result.stdout.strip():
+        views = parse_views_list(result.stdout)
+        assert len(views) == 0, "Should not return views with wrong auth"
+```
+
+### Parser Function 設計準則
+
+1. **命名規則**：`parse_<command>_<output_type>`
+   - `parse_views_list()` - 解析 views 列表
+   - `parse_job_status()` - 解析 job 狀態
+   - `parse_build_result()` - 解析 build 結果
+
+2. **返回型別**：使用強型別的資料結構
+   - 簡單列表：`Set[str]` 或 `List[str]`
+   - 結構化資料：`@dataclass` 或 `Dict`
+   - 複雜結構：自訂 dataclass 組合
+
+3. **Docstring**：必須包含
+   - 簡短描述
+   - 預期輸入格式範例
+   - 返回值說明
+
+4. **錯誤處理**：
+   - 優雅地處理空輸出、格式錯誤
+   - 跳過無效或特殊訊息
+   - 返回空集合/None 而非拋出例外
+
+### 範例：複雜的 Parser
+
+```python
+from dataclasses import dataclass
+from typing import List, Optional
+import re
+
+
+@dataclass
+class JobStatus:
+    """Job 狀態的結構化資料"""
+    name: str
+    enabled: bool
+    last_build_number: Optional[int]
+    last_build_status: Optional[str]
+
+
+def parse_job_status(stdout: str) -> JobStatus:
+    """
+    解析 job-status 命令的輸出
+
+    預期格式：
+        Job: test-job-1
+        Enabled: true
+        Last Build: #42
+        Status: SUCCESS
+
+    Returns:
+        JobStatus: 結構化的 job 狀態資料
+    """
+    name = None
+    enabled = False
+    last_build_number = None
+    last_build_status = None
+
+    for line in stdout.split('\n'):
+        if line.startswith('Job:'):
+            name = line.split(':', 1)[1].strip()
+        elif line.startswith('Enabled:'):
+            enabled = line.split(':', 1)[1].strip().lower() == 'true'
+        elif line.startswith('Last Build:'):
+            match = re.search(r'#(\d+)', line)
+            if match:
+                last_build_number = int(match.group(1))
+        elif line.startswith('Status:'):
+            last_build_status = line.split(':', 1)[1].strip()
+
+    return JobStatus(
+        name=name or '',
+        enabled=enabled,
+        last_build_number=last_build_number,
+        last_build_status=last_build_status
+    )
+
+
+def test_job_status(run_jenkee):
+    """測試 job-status 命令"""
+    # Act
+    result = run_jenkee.run("job-status", "test-job-1")
+
+    # Parse
+    status = parse_job_status(result.stdout)
+
+    # Assert: 精確驗證每個欄位
+    assert status.name == "test-job-1"
+    assert status.enabled is True
+    assert status.last_build_number is not None
+    assert status.last_build_status in ["SUCCESS", "FAILURE", "UNSTABLE"]
 ```
 
 ## 注意事項
