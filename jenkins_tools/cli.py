@@ -40,6 +40,11 @@ def main():
 
     command = sys.argv[1]
 
+    # Handle global --help or -h flag
+    if command in ("--help", "-h"):
+        cmd = HelpCommand()
+        sys.exit(cmd.execute())
+
     # Dispatch to appropriate command
     if command == "auth":
         cmd = AuthCommand()
