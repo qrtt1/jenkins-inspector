@@ -26,6 +26,11 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/qrtt1/jenkins-inspector"
+Repository = "https://github.com/qrtt1/jenkins-inspector"
+Issues = "https://github.com/qrtt1/jenkins-inspector/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
