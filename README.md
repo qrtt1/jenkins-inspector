@@ -5,9 +5,10 @@
 [![Tests](https://github.com/qrtt1/jenkins-inspector/actions/workflows/test.yml/badge.svg)](https://github.com/qrtt1/jenkins-inspector/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**讓 AI Agent 幫你探索和管理 Jenkins 的 CLI 工具**
-
-Jenkins CLI 工具，提供命令列介面來管理和探索 Jenkins jobs、builds、credentials 等資源。主要 CLI 命令為 `jenkee`（保留 `jks` 作為相容 alias）。
+> [!NOTE]
+> **讓 AI Agent 幫你探索和管理 Jenkins 的 CLI 工具**
+>
+> Jenkins CLI 工具，提供命令列介面來管理和探索 Jenkins jobs、builds、credentials 等資源。主要 CLI 命令為 `jenkee`（保留 `jks` 作為相容 alias）。
 
 ## 為什麼需要 jenkee？
 
