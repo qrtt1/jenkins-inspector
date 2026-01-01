@@ -35,6 +35,10 @@ dev = [
     "flake8>=5.0",
     "mypy>=0.990",
 ]
+release = [
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
 
 [project.scripts]
 jks = "jenkins_tools.cli:main"
