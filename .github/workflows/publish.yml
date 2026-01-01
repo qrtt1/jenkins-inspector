@@ -21,6 +21,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+
+    - name: Update version in source files
+      run: |
+        VERSION=${{ steps.get_version.outputs.version }}
+        echo "Updating version to $VERSION"
+        sed -i "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" jenkins_tools/__init__.py
+        echo "Updated files:"
+        grep "^version = " pyproject.toml
+        grep "__version__ = " jenkins_tools/__init__.py
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
@@ -43,6 +60,23 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+
+    - name: Update version in source files
+      run: |
+        VERSION=${{ steps.get_version.outputs.version }}
+        echo "Updating version to $VERSION"
+        sed -i "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" jenkins_tools/__init__.py
+        echo "Updated files:"
+        grep "^version = " pyproject.toml
+        grep "__version__ = " jenkins_tools/__init__.py
 
     - name: Set up Python
       uses: actions/setup-python@v5
