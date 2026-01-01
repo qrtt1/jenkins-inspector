@@ -35,6 +35,7 @@ Issues = "https://github.com/qrtt1/jenkins-inspector/issues"
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-html>=4.0",
     "testcontainers>=3.7.1",
     "black>=22.0",
     "flake8>=5.0",

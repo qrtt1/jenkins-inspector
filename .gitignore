@@ -44,6 +44,9 @@ Thumbs.db
 .coverage
 htmlcov/
 .tox/
+*.html
+*_report.txt
+*_report.xml
 
 # Logs
 *.log
@@ -54,3 +57,4 @@ htmlcov/
 
 # Claude plans (temporary planning files)
 .claude/plans/
+tests/fixtures/gcp-keys/*.json

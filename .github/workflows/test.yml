@@ -30,6 +30,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
 
+    - name: Setup GCP test keys
+      run: |
+        mkdir -p tests/fixtures/gcp-keys
+        if [ -n "${{ secrets.GCP_SA1_KEY }}" ] && [ -n "${{ secrets.GCP_SA2_KEY }}" ]; then
+          echo '${{ secrets.GCP_SA1_KEY }}' > tests/fixtures/gcp-keys/jenkee-tester-viewer-sa-1.json
+          echo '${{ secrets.GCP_SA2_KEY }}' > tests/fixtures/gcp-keys/jenkee-tester-viewer-sa-2.json
+          echo "✓ GCP test keys configured"
+        else
+          echo "::warning::GCP_SA1_KEY or GCP_SA2_KEY secrets not configured. GCP tests will be skipped."
+          echo "::warning::See docs/GITHUB_SECRETS_SETUP.md for setup instructions."
+        fi
+
     - name: Run tests with pytest
       run: |
         pytest -v --cov=jenkins_tools --cov-report=term
