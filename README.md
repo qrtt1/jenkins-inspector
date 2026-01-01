@@ -6,10 +6,16 @@ Jenkins CLI 工具，提供命令列介面來管理和探索 Jenkins jobs、buil
 
 ## 安裝
 
-### 使用 pipx 安裝（推薦）
+### 從 PyPI 安裝（推薦）
 
 ```bash
-pipx install git+https://github.com/qrtt1/jenkins-inspector
+pip install jenkee
+```
+
+或使用 pipx（建議用於 CLI 工具）：
+
+```bash
+pipx install jenkee
 ```
 
 ### 開發模式安裝
@@ -22,10 +28,11 @@ git clone https://github.com/qrtt1/jenkins-inspector
 cd jenkins-inspector
 
 # 啟用虛擬環境
-source venv/bin/activate
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 以 editable 模式安裝
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ## 與 AI Agent 的互動
