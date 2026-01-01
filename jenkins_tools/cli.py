@@ -28,6 +28,7 @@ from jenkins_tools.commands import (
     HelpCommand,
     PromptCommand,
 )
+from jenkins_tools.commands.gcp import GCPCommand
 
 
 def main():
@@ -108,6 +109,9 @@ def main():
         sys.exit(cmd.execute())
     elif command == "groovy":
         cmd = GroovyCommand(sys.argv[2:])
+        sys.exit(cmd.execute())
+    elif command == "gcp":
+        cmd = GCPCommand(sys.argv[2:])
         sys.exit(cmd.execute())
     elif command == "prompt":
         cmd = PromptCommand(sys.argv[2:])

@@ -401,3 +401,82 @@ def run_jenkee_bad_auth(jenkins_bad_env) -> JenkeeRunner:
         run_jenkee_bad_auth.build_command("auth").must_fail().run()
     """
     return JenkeeRunner(jenkins_bad_env)
+
+
+@pytest.fixture(scope="session")
+def gcp_key_files() -> dict[str, Path]:
+    """
+    提供 GCP Service Account key files 路徑 (session scope)
+
+    包含兩組 SA keys，用於測試一般操作和 key rotation。
+    這些 keys 應該放在 tests/fixtures/gcp-keys/ 目錄下。
+
+    Returns:
+        dict: key file 路徑字典
+            - 'sa1': SA-1 的 key file 路徑
+            - 'sa2': SA-2 的 key file 路徑
+
+    使用範例：
+        def test_create_credential(run_jenkee, gcp_key_files):
+            result = run_jenkee.run("gcp", "credential", "create",
+                                   "test-cred", str(gcp_key_files['sa1']))
+
+    注意：
+        - 這些 key files 不應該提交到版本控制
+        - 需要在 .gitignore 中排除 tests/fixtures/gcp-keys/*.json
+        - Local 環境：如果 key files 不存在，會跳過相關測試
+        - CI 環境：應該透過 GitHub Secrets 設定，缺少時會顯示 warning
+    """
+    test_dir = Path(__file__).resolve().parent
+    gcp_keys_dir = test_dir / "fixtures" / "gcp-keys"
+
+    key_files = {
+        'sa1': gcp_keys_dir / "jenkee-tester-viewer-sa-1.json",
+        'sa2': gcp_keys_dir / "jenkee-tester-viewer-sa-2.json",
+    }
+
+    # 檢查 key files 是否存在
+    missing_keys = [name for name, path in key_files.items() if not path.exists()]
+    if missing_keys:
+        # 在 CI 環境中顯示更明確的訊息
+        is_ci = os.getenv('CI') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true'
+        if is_ci:
+            skip_msg = (
+                f"GCP key files not found in CI environment: {missing_keys}. "
+                f"Please configure GCP_SA1_KEY and GCP_SA2_KEY secrets. "
+                f"See docs/GITHUB_SECRETS_SETUP.md for instructions."
+            )
+        else:
+            skip_msg = (
+                f"GCP key files not found: {missing_keys}. "
+                f"Download keys using: gcloud iam service-accounts keys create"
+            )
+        pytest.skip(skip_msg)
+
+    return key_files
+
+
+@pytest.fixture(scope="session")
+def gcp_sa1_info(gcp_key_files) -> dict:
+    """
+    讀取 SA-1 key 資訊用於測試 (session scope)
+
+    Returns:
+        dict: SA-1 的 JSON key 內容
+    """
+    import json
+    with open(gcp_key_files['sa1'], 'r') as f:
+        return json.load(f)
+
+
+@pytest.fixture(scope="session")
+def gcp_sa2_info(gcp_key_files) -> dict:
+    """
+    讀取 SA-2 key 資訊用於測試 (session scope)
+
+    Returns:
+        dict: SA-2 的 JSON key 內容
+    """
+    import json
+    with open(gcp_key_files['sa2'], 'r') as f:
+        return json.load(f)
