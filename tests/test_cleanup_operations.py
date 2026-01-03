@@ -133,7 +133,7 @@ def create_simple_job_xml(description: str = "") -> str:
 
 def test_delete_builds_single(run_jenkee_authed):
     """
-    測試刪除單一 build
+    測試刪除單一 build（使用 --yes-i-really-mean-it flag）
 
     對應 test plan 步驟 2
     """
@@ -152,7 +152,9 @@ def test_delete_builds_single(run_jenkee_authed):
     build_to_delete = min(builds_before.build_numbers)
 
     # Act: 刪除單一 build
-    result = run_jenkee_authed.run("delete-builds", "test-job-1", str(build_to_delete))
+    result = run_jenkee_authed.run(
+        "delete-builds", "test-job-1", str(build_to_delete), "--yes-i-really-mean-it"
+    )
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"delete-builds should succeed, got: {result.stderr}"
@@ -168,7 +170,7 @@ def test_delete_builds_single(run_jenkee_authed):
 
 def test_delete_builds_range(run_jenkee_authed):
     """
-    測試刪除 build 範圍
+    測試刪除 build 範圍（使用 --yes-i-really-mean-it flag）
 
     對應 test plan 步驟 4
     """
@@ -192,7 +194,9 @@ def test_delete_builds_range(run_jenkee_authed):
     build_range = f"{start_build}-{end_build}"
 
     # Act: 刪除範圍
-    result = run_jenkee_authed.run("delete-builds", job_name, build_range)
+    result = run_jenkee_authed.run(
+        "delete-builds", job_name, build_range, "--yes-i-really-mean-it"
+    )
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"delete-builds should succeed, got: {result.stderr}"
@@ -221,7 +225,7 @@ def test_delete_builds_nonexistent(run_jenkee_authed):
 
     # Act: 嘗試刪除並允許失敗
     result = run_jenkee_authed.build_command(
-        "delete-builds", "test-job-1", str(nonexistent_build)
+        "delete-builds", "test-job-1", str(nonexistent_build), "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # Assert: Jenkins CLI 在 build 不存在時仍會返回成功（returncode 0）
@@ -244,7 +248,7 @@ def test_delete_builds_nonexistent_job(run_jenkee_authed):
 
     # Act: 嘗試刪除並允許失敗
     result = run_jenkee_authed.build_command(
-        "delete-builds", nonexistent_job, "1"
+        "delete-builds", nonexistent_job, "1", "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # Assert: 驗證失敗
@@ -256,6 +260,108 @@ def test_delete_builds_nonexistent_job(run_jenkee_authed):
         f"Should have error message, got: {result.stdout + result.stderr}"
 
 
+def test_delete_builds_with_confirmation_cancelled(run_jenkee_authed):
+    """
+    測試取消刪除 build 操作（模擬輸入 n）
+
+    對應文件中的「測試 2: 取消刪除」
+    """
+    # Arrange: 建立測試用 job 與 build
+    job_name = "test-delete-builds-cancel"
+    job_xml = create_simple_job_xml("Test job for build deletion cancellation")
+
+    run_jenkee_authed.build_command(
+        "delete-job", job_name, "--yes-i-really-mean-it"
+    ).allow_failure().run()
+
+    create_result = run_jenkee_authed.build_command(
+        "create-job", job_name
+    ).with_stdin(job_xml).run()
+    assert create_result.returncode == 0, "Should create job successfully"
+
+    build_result = run_jenkee_authed.run("build", job_name, "-s")
+    assert build_result.returncode == 0, "Should trigger build successfully"
+
+    list_result = run_jenkee_authed.run("list-builds", job_name)
+    builds_before = parse_build_list(list_result.stdout)
+    assert builds_before.count >= 1, "Should have at least one build"
+
+    build_to_delete = min(builds_before.build_numbers)
+
+    # Act: 嘗試刪除但取消（模擬輸入 'n'）
+    result = run_jenkee_authed.build_command(
+        "delete-builds", job_name, str(build_to_delete)
+    ).with_stdin("n\n").run()
+
+    # Assert: 驗證返回 0（取消不是錯誤）
+    assert result.returncode == 0, f"Should return 0 when cancelled, got: {result.returncode}"
+    assert "cancelled" in result.stdout.lower() or "canceled" in result.stdout.lower(), \
+        "Should show cancellation message"
+
+    # Verify: build 仍然存在
+    list_after = run_jenkee_authed.run("list-builds", job_name)
+    builds_after = parse_build_list(list_after.stdout)
+    assert builds_after.contains(build_to_delete), \
+        f"Build #{build_to_delete} should still exist after cancellation"
+
+    # Cleanup
+    cleanup_build = run_jenkee_authed.run(
+        "delete-builds", job_name, str(build_to_delete), "--yes-i-really-mean-it"
+    )
+    assert cleanup_build.returncode == 0
+    cleanup_job = run_jenkee_authed.run("delete-job", job_name, "--yes-i-really-mean-it")
+    assert cleanup_job.returncode == 0
+
+
+def test_delete_builds_with_confirmation_confirmed(run_jenkee_authed):
+    """
+    測試互動式確認後刪除 build（模擬輸入 y）
+
+    對應文件中的「測試 1: 互動式確認」
+    """
+    # Arrange: 建立測試用 job 與 build
+    job_name = "test-delete-builds-confirm"
+    job_xml = create_simple_job_xml("Test job for build deletion confirmation")
+
+    run_jenkee_authed.build_command(
+        "delete-job", job_name, "--yes-i-really-mean-it"
+    ).allow_failure().run()
+
+    create_result = run_jenkee_authed.build_command(
+        "create-job", job_name
+    ).with_stdin(job_xml).run()
+    assert create_result.returncode == 0, "Should create job successfully"
+
+    build_result = run_jenkee_authed.run("build", job_name, "-s")
+    assert build_result.returncode == 0, "Should trigger build successfully"
+
+    list_result = run_jenkee_authed.run("list-builds", job_name)
+    builds_before = parse_build_list(list_result.stdout)
+    assert builds_before.count >= 1, "Should have at least one build"
+
+    build_to_delete = min(builds_before.build_numbers)
+
+    # Act: 刪除並確認（模擬輸入 'y'）
+    result = run_jenkee_authed.build_command(
+        "delete-builds", job_name, str(build_to_delete)
+    ).with_stdin("y\n").run()
+
+    # Assert: 驗證執行成功
+    assert result.returncode == 0, f"delete-builds should succeed, got: {result.stderr}"
+    assert "✓" in result.stdout or "success" in result.stdout.lower() or "deleted" in result.stdout.lower(), \
+        "Should show success message"
+
+    # Verify: build 已刪除
+    list_after = run_jenkee_authed.run("list-builds", job_name)
+    builds_after = parse_build_list(list_after.stdout)
+    assert not builds_after.contains(build_to_delete), \
+        f"Build #{build_to_delete} should be deleted"
+
+    # Cleanup
+    cleanup_job = run_jenkee_authed.run("delete-job", job_name, "--yes-i-really-mean-it")
+    assert cleanup_job.returncode == 0
+
+
 # ============================================================================
 # 測試函數 - delete-job 指令
 # ============================================================================
@@ -263,7 +369,7 @@ def test_delete_builds_nonexistent_job(run_jenkee_authed):
 
 def test_delete_job_single(run_jenkee_authed):
     """
-    測試刪除單一 job
+    測試刪除單一 job（使用 --yes-i-really-mean-it flag）
 
     對應 test plan 步驟 8
     """
@@ -278,7 +384,7 @@ def test_delete_job_single(run_jenkee_authed):
     # 如果 job 已存在（前次測試殘留），先刪除
     if create_result.returncode != 0:
         delete_old = run_jenkee_authed.build_command(
-            "delete-job", job_name
+            "delete-job", job_name, "--yes-i-really-mean-it"
         ).allow_failure().run()
         # 重新建立
         create_result = run_jenkee_authed.build_command(
@@ -287,8 +393,8 @@ def test_delete_job_single(run_jenkee_authed):
 
     assert create_result.returncode == 0, "Should create job successfully"
 
-    # Act: 刪除 job
-    result = run_jenkee_authed.run("delete-job", job_name)
+    # Act: 刪除 job（使用確認 flag）
+    result = run_jenkee_authed.run("delete-job", job_name, "--yes-i-really-mean-it")
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"delete-job should succeed, got: {result.stderr}"
@@ -313,7 +419,7 @@ def test_delete_job_verify_with_get_job(run_jenkee_authed):
 
     # 清理可能的舊 job
     cleanup = run_jenkee_authed.build_command(
-        "delete-job", job_name
+        "delete-job", job_name, "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # 建立新 job
@@ -322,8 +428,8 @@ def test_delete_job_verify_with_get_job(run_jenkee_authed):
     ).with_stdin(job_xml).run()
     assert create_result.returncode == 0
 
-    # Act: 刪除 job
-    delete_result = run_jenkee_authed.run("delete-job", job_name)
+    # Act: 刪除 job（使用確認 flag）
+    delete_result = run_jenkee_authed.run("delete-job", job_name, "--yes-i-really-mean-it")
     assert delete_result.returncode == 0
 
     # Verify: 嘗試取得已刪除的 job 應該失敗
@@ -348,7 +454,7 @@ def test_delete_job_multiple(run_jenkee_authed):
     for job_name in job_names:
         # 清理可能的舊 job
         cleanup = run_jenkee_authed.build_command(
-            "delete-job", job_name
+            "delete-job", job_name, "--yes-i-really-mean-it"
         ).allow_failure().run()
 
         # 建立新 job
@@ -357,8 +463,8 @@ def test_delete_job_multiple(run_jenkee_authed):
         ).with_stdin(job_xml).run()
         assert create_result.returncode == 0, f"Should create {job_name}"
 
-    # Act: 批次刪除
-    result = run_jenkee_authed.run("delete-job", *job_names)
+    # Act: 批次刪除（使用確認 flag）
+    result = run_jenkee_authed.run("delete-job", *job_names, "--yes-i-really-mean-it")
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"delete-job should succeed, got: {result.stderr}"
@@ -382,9 +488,9 @@ def test_delete_job_nonexistent(run_jenkee_authed):
     # Arrange: 使用不存在的 job 名稱
     nonexistent_job = "non-existent-job-for-deletion"
 
-    # Act: 嘗試刪除並允許失敗
+    # Act: 嘗試刪除並允許失敗（使用確認 flag）
     result = run_jenkee_authed.build_command(
-        "delete-job", nonexistent_job
+        "delete-job", nonexistent_job, "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # Assert: 驗證失敗
@@ -394,6 +500,84 @@ def test_delete_job_nonexistent(run_jenkee_authed):
     error_output = (result.stdout + result.stderr).lower()
     assert 'error' in error_output or 'failed' in error_output, \
         f"Should have error message, got: {result.stdout + result.stderr}"
+
+
+def test_delete_job_with_confirmation_cancelled(run_jenkee_authed):
+    """
+    測試取消刪除操作（模擬輸入 n）
+
+    對應文件中的「測試 2: 取消刪除」
+    """
+    # Arrange: 先建立測試用 job
+    job_name = "test-delete-cancel"
+    job_xml = create_simple_job_xml("Test job for cancellation")
+
+    # 清理可能的舊 job
+    cleanup = run_jenkee_authed.build_command(
+        "delete-job", job_name, "--yes-i-really-mean-it"
+    ).allow_failure().run()
+
+    # 建立新 job
+    create_result = run_jenkee_authed.build_command(
+        "create-job", job_name
+    ).with_stdin(job_xml).run()
+    assert create_result.returncode == 0, "Should create job successfully"
+
+    # Act: 嘗試刪除但取消（模擬輸入 'n'）
+    result = run_jenkee_authed.build_command(
+        "delete-job", job_name
+    ).with_stdin("n\n").run()
+
+    # Assert: 驗證返回 0（取消不是錯誤）
+    assert result.returncode == 0, f"Should return 0 when cancelled, got: {result.returncode}"
+    assert "cancelled" in result.stdout.lower() or "canceled" in result.stdout.lower(), \
+        "Should show cancellation message"
+
+    # Verify: 驗證 job 仍然存在
+    list_result = run_jenkee_authed.run("list-jobs", "--all")
+    jobs = parse_job_list(list_result.stdout)
+    assert job_name in jobs, f"Job '{job_name}' should still exist after cancellation"
+
+    # Cleanup: 清理測試 job
+    cleanup_final = run_jenkee_authed.run("delete-job", job_name, "--yes-i-really-mean-it")
+    assert cleanup_final.returncode == 0
+
+
+def test_delete_job_with_confirmation_confirmed(run_jenkee_authed):
+    """
+    測試互動式確認後刪除（模擬輸入 y）
+
+    對應文件中的「測試 1: 互動式確認」
+    """
+    # Arrange: 先建立測試用 job
+    job_name = "test-delete-confirm"
+    job_xml = create_simple_job_xml("Test job for confirmation")
+
+    # 清理可能的舊 job
+    cleanup = run_jenkee_authed.build_command(
+        "delete-job", job_name, "--yes-i-really-mean-it"
+    ).allow_failure().run()
+
+    # 建立新 job
+    create_result = run_jenkee_authed.build_command(
+        "create-job", job_name
+    ).with_stdin(job_xml).run()
+    assert create_result.returncode == 0, "Should create job successfully"
+
+    # Act: 刪除並確認（模擬輸入 'y'）
+    result = run_jenkee_authed.build_command(
+        "delete-job", job_name
+    ).with_stdin("y\n").run()
+
+    # Assert: 驗證執行成功
+    assert result.returncode == 0, f"delete-job should succeed, got: {result.stderr}"
+    assert "✓" in result.stdout or "success" in result.stdout.lower() or "deleted" in result.stdout.lower(), \
+        "Should show success message"
+
+    # Verify: 驗證 job 已刪除
+    list_result = run_jenkee_authed.run("list-jobs", "--all")
+    jobs = parse_job_list(list_result.stdout)
+    assert job_name not in jobs, f"Job '{job_name}' should be deleted"
 
 
 # ============================================================================
@@ -414,7 +598,7 @@ def test_complete_cleanup_workflow(run_jenkee_authed):
 
     # 清理可能的舊 job
     cleanup = run_jenkee_authed.build_command(
-        "delete-job", job_name
+        "delete-job", job_name, "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     create_result = run_jenkee_authed.build_command(
@@ -439,7 +623,7 @@ def test_complete_cleanup_workflow(run_jenkee_authed):
         builds_to_delete = build_numbers[:-1]
         for build_num in builds_to_delete:
             delete_build_result = run_jenkee_authed.run(
-                "delete-builds", job_name, str(build_num)
+                "delete-builds", job_name, str(build_num), "--yes-i-really-mean-it"
             )
             assert delete_build_result.returncode == 0, \
                 f"Step 4: Should delete build #{build_num}"
@@ -450,7 +634,7 @@ def test_complete_cleanup_workflow(run_jenkee_authed):
     assert builds_after.count >= 1, "Step 5: Should have at least 1 build remaining"
 
     # 6. 刪除 job（包含剩餘的 builds）
-    delete_job_result = run_jenkee_authed.run("delete-job", job_name)
+    delete_job_result = run_jenkee_authed.run("delete-job", job_name, "--yes-i-really-mean-it")
     assert delete_job_result.returncode == 0, "Step 6: Should delete job"
 
     # 7. 驗證 job 已刪除
@@ -471,7 +655,7 @@ def test_soft_delete_strategy(run_jenkee_authed):
 
     # 清理可能的舊 job
     cleanup = run_jenkee_authed.build_command(
-        "delete-job", job_name
+        "delete-job", job_name, "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     create_result = run_jenkee_authed.build_command(
@@ -497,7 +681,7 @@ def test_soft_delete_strategy(run_jenkee_authed):
         "Step 3: Job should be disabled"
 
     # 4. 刪除 job（軟刪除最後一步）
-    delete_result = run_jenkee_authed.run("delete-job", job_name)
+    delete_result = run_jenkee_authed.run("delete-job", job_name, "--yes-i-really-mean-it")
     assert delete_result.returncode == 0, "Step 4: Should delete job"
 
     # 5. 驗證 job 已刪除
