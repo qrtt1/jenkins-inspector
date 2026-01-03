@@ -32,11 +32,14 @@ jobs:
         pip install -e ".[dev]"
 
     - name: Setup GCP test keys
+      env:
+        GCP_SA1_KEY: ${{ secrets.GCP_SA1_KEY }}
+        GCP_SA2_KEY: ${{ secrets.GCP_SA2_KEY }}
       run: |
         mkdir -p tests/fixtures/gcp-keys
-        if [ -n "${{ secrets.GCP_SA1_KEY }}" ] && [ -n "${{ secrets.GCP_SA2_KEY }}" ]; then
-          echo '${{ secrets.GCP_SA1_KEY }}' > tests/fixtures/gcp-keys/jenkee-tester-viewer-sa-1.json
-          echo '${{ secrets.GCP_SA2_KEY }}' > tests/fixtures/gcp-keys/jenkee-tester-viewer-sa-2.json
+        if [[ -n "${GCP_SA1_KEY}" && -n "${GCP_SA2_KEY}" ]]; then
+          printf '%s' "${GCP_SA1_KEY}" > tests/fixtures/gcp-keys/jenkee-tester-viewer-sa-1.json
+          printf '%s' "${GCP_SA2_KEY}" > tests/fixtures/gcp-keys/jenkee-tester-viewer-sa-2.json
           echo "✓ GCP test keys configured"
         else
           echo "::warning::GCP_SA1_KEY or GCP_SA2_KEY secrets not configured. GCP tests will be skipped."
