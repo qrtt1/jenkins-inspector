@@ -35,6 +35,7 @@ jenkee delete-job <job-name1> <job-name2> [job-name3 ...]
 | 參數 | 說明 | 必填 |
 |------|------|------|
 | `<job-name>` | Job 名稱（可指定多個） | 是 |
+| `--yes-i-really-mean-it` | 跳過互動式確認，直接執行（適合自動化腳本） | 否 |
 
 ## 功能說明
 
@@ -46,10 +47,27 @@ jenkee delete-job <job-name1> <job-name2> [job-name3 ...]
 
 ## 執行範例
 
-### 刪除單一 Job
+### 互動式確認（預設行為）
 
 ```bash
 $ jenkee delete-job old-unused-job
+Are you sure you want to delete job 'old-unused-job'? (y/N): y
+✓ Successfully deleted job 'old-unused-job'
+```
+
+### 取消刪除
+
+```bash
+$ jenkee delete-job old-unused-job
+Are you sure you want to delete job 'old-unused-job'? (y/N): n
+Operation cancelled.
+```
+
+### 使用確認 Flag（自動化腳本）
+
+```bash
+# 跳過互動式確認，直接執行
+$ jenkee delete-job old-unused-job --yes-i-really-mean-it
 ✓ Successfully deleted job 'old-unused-job'
 ```
 
@@ -57,6 +75,7 @@ $ jenkee delete-job old-unused-job
 
 ```bash
 $ jenkee delete-job job-a job-b job-c
+Are you sure you want to delete 3 job(s)? (y/N): y
 ✓ Successfully deleted 3 job(s)
   - job-a
   - job-b

@@ -154,10 +154,10 @@ jenkee gcp credential delete my-gcp-sa
 Are you sure you want to delete credential 'my-gcp-sa'? (y/N):
 ```
 
-或使用 `--confirm` flag 跳過互動式確認（適合自動化腳本）：
+或使用 `--yes-i-really-mean-it` flag 跳過互動式確認（適合自動化腳本）：
 
 ```bash
-jenkee gcp credential delete my-gcp-sa --confirm
+jenkee gcp credential delete my-gcp-sa --yes-i-really-mean-it
 ```
 
 ## 在 Jenkins Job 中使用

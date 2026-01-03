@@ -38,6 +38,7 @@ jenkee delete-builds <job-name> <start-number>-<end-number>
 | `<job-name>` | Job 名稱 | 是 |
 | `<build-number>` | 單一 build 編號 | 是（擇一） |
 | `<start>-<end>` | Build 範圍（包含起終點） | 是（擇一） |
+| `--yes-i-really-mean-it` | 跳過互動式確認，直接執行（適合自動化腳本） | 否 |
 
 ## 功能說明
 
@@ -49,17 +50,27 @@ jenkee delete-builds <job-name> <start-number>-<end-number>
 
 ## 執行範例
 
-### 刪除單一 Build
+### 互動式確認（預設行為）
 
 ```bash
 $ jenkee delete-builds my-job 100
+Are you sure you want to delete build(s) 100 for job 'my-job'? (y/N): y
 ✓ Successfully deleted build(s) 100 for job 'my-job'
 ```
 
-### 刪除 Build 範圍
+### 取消刪除
 
 ```bash
 $ jenkee delete-builds my-job 1-50
+Are you sure you want to delete build(s) 1-50 for job 'my-job'? (y/N): n
+Operation cancelled.
+```
+
+### 使用確認 Flag（自動化腳本）
+
+```bash
+# 跳過互動式確認，直接執行
+$ jenkee delete-builds my-job 1-50 --yes-i-really-mean-it
 ✓ Successfully deleted build(s) 1-50 for job 'my-job'
 ```
 

@@ -59,11 +59,21 @@
 
 ```bash
 # 從檔案讀取 Script
-jks groovy <script-file.groovy>
+jenkee groovy <script-file.groovy>
 
 # 從標準輸入 (stdin) 讀取 Script
-echo "println hudson.model.Hudson.instance.pluginManager.plugins*.shortName" | jks groovy
+echo "println hudson.model.Hudson.instance.pluginManager.plugins*.shortName" | jenkee groovy
+
+# 跳過互動式確認（自動化腳本）
+jenkee groovy <script-file.groovy> --yes-i-really-mean-it
 ```
+
+## 參數說明
+
+| 參數 | 說明 | 必填 |
+|------|------|------|
+| `<script-file.groovy>` | Groovy script 檔案路徑 | 否（可從 stdin 讀取） |
+| `--yes-i-really-mean-it` | 跳過互動式確認，直接執行（適合自動化腳本） | 否 |
 
 ## 功能說明
 
@@ -74,6 +84,34 @@ echo "println hudson.model.Hudson.instance.pluginManager.plugins*.shortName" | j
 4. 將 Script 的標準輸出 (stdout) 顯示在終端機
 
 ## 執行範例
+
+### 互動式確認（預設行為）
+
+```bash
+$ jenkee groovy query_azure.groovy
+This command can execute arbitrary Groovy code with full Jenkins access.
+Are you sure you want to execute this script? (y/N): y
+ID: azure-service-principal, Description: Azure SPN for Staging
+ID: azure-storage-key, Description: Storage Account Key
+```
+
+### 取消執行
+
+```bash
+$ jenkee groovy query_azure.groovy
+This command can execute arbitrary Groovy code with full Jenkins access.
+Are you sure you want to execute this script? (y/N): n
+Operation cancelled.
+```
+
+### 使用確認 Flag（自動化腳本）
+
+```bash
+# 跳過互動式確認，直接執行
+$ jenkee groovy query_azure.groovy --yes-i-really-mean-it
+ID: azure-service-principal, Description: Azure SPN for Staging
+ID: azure-storage-key, Description: Storage Account Key
+```
 
 ### 查詢 Azure Credentials (使用者案例)
 
