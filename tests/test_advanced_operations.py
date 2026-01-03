@@ -82,7 +82,9 @@ def test_groovy_simple_hello(run_jenkee_authed, tmp_path):
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -94,6 +96,50 @@ def test_groovy_simple_hello(run_jenkee_authed, tmp_path):
     # Verify: 驗證輸出內容
     assert "Hello from Groovy" in output.stdout, \
         f"Expected 'Hello from Groovy' in output, got: {output.stdout}"
+
+
+def test_groovy_with_confirmation_cancelled(run_jenkee_authed, tmp_path):
+    """
+    測試取消執行 Groovy script（模擬輸入 n）
+
+    對應文件中的「測試 2: 取消執行」
+    """
+    # Arrange: 準備簡單的 script
+    script = "println('Hello from Groovy')"
+    script_file = tmp_path / "hello-cancel.groovy"
+    script_file.write_text(script)
+
+    # Act: 嘗試執行但取消（模擬輸入 'n'）
+    result = run_jenkee_authed.build_command(
+        "groovy", str(script_file)
+    ).with_stdin("n\n").run()
+
+    # Assert: 驗證返回 0（取消不是錯誤）
+    assert result.returncode == 0, f"Should return 0 when cancelled, got: {result.returncode}"
+    assert "cancelled" in result.stdout.lower() or "canceled" in result.stdout.lower(), \
+        "Should show cancellation message"
+
+
+def test_groovy_with_confirmation_confirmed(run_jenkee_authed, tmp_path):
+    """
+    測試互動式確認後執行 Groovy script（模擬輸入 y）
+
+    對應文件中的「測試 1: 互動式確認」
+    """
+    # Arrange: 準備簡單的 script
+    script = "println('Hello from Groovy')"
+    script_file = tmp_path / "hello-confirm.groovy"
+    script_file.write_text(script)
+
+    # Act: 執行並確認（模擬輸入 'y'）
+    result = run_jenkee_authed.build_command(
+        "groovy", str(script_file)
+    ).with_stdin("y\n").run()
+
+    # Assert: 驗證執行成功
+    assert result.returncode == 0, f"groovy should succeed, got: {result.stderr}"
+    assert "Hello from Groovy" in result.stdout, \
+        "Should show groovy script output after confirmation"
 
 
 def test_groovy_jenkins_version(run_jenkee_authed, tmp_path):
@@ -111,7 +157,9 @@ println(Jenkins.instance.version)
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -145,7 +193,9 @@ Jenkins.instance.items.each { job ->
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -176,7 +226,9 @@ println(Jenkins.instance.items.size())
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -211,7 +263,9 @@ println("Total Jobs: ${jenkins.items.size()}")
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -250,7 +304,9 @@ if (job != null) {
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -283,7 +339,7 @@ def test_groovy_syntax_error(run_jenkee_authed, tmp_path):
 
     # Act: 執行 groovy 指令並允許失敗
     result = run_jenkee_authed.build_command(
-        "groovy", str(script_file)
+        "groovy", str(script_file), "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # Parse: 解析輸出
@@ -321,7 +377,9 @@ if (job == null) {
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -348,7 +406,7 @@ def test_groovy_empty_script(run_jenkee_authed, tmp_path):
 
     # Act: 執行 groovy 指令並允許失敗
     result = run_jenkee_authed.build_command(
-        "groovy", str(script_file)
+        "groovy", str(script_file), "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # Assert: 驗證失敗（empty script 應該被拒絕）
@@ -371,7 +429,7 @@ def test_groovy_nonexistent_file(run_jenkee_authed, tmp_path):
 
     # Act: 執行 groovy 指令並允許失敗
     result = run_jenkee_authed.build_command(
-        "groovy", str(script_file)
+        "groovy", str(script_file), "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # Assert: 驗證失敗
@@ -410,7 +468,9 @@ println("Nodes: ${jenkins.nodes.size() + 1}")  // +1 for master
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -460,7 +520,9 @@ if (dryRun) {
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)
@@ -511,7 +573,9 @@ jenkins.items.each { job ->
     script_file.write_text(script)
 
     # Act: 執行 groovy 指令
-    result = run_jenkee_authed.run("groovy", str(script_file))
+    result = run_jenkee_authed.run(
+        "groovy", str(script_file), "--yes-i-really-mean-it"
+    )
 
     # Parse: 解析輸出
     output = parse_groovy_output(result)

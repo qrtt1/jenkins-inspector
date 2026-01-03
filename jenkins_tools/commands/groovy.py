@@ -3,13 +3,13 @@
 import sys
 from pathlib import Path
 
-from jenkins_tools.core import Command, JenkinsConfig, JenkinsCLI
+from jenkins_tools.core import Command, DangerousCommandMixin, JenkinsConfig, JenkinsCLI
 
 
-class GroovyCommand(Command):
+class GroovyCommand(DangerousCommandMixin, Command):
     """Execute a Groovy script on the Jenkins server"""
 
-    def __init__(self, args):
+    def __init__(self, args=None):
         """
         Initialize with command line arguments
 
@@ -17,7 +17,8 @@ class GroovyCommand(Command):
             args: List of command arguments (sys.argv[2:])
                   First argument can be a path to a .groovy file
         """
-        self.args = args
+        self.args = args or []
+        super().__init__()
 
     def execute(self) -> int:
         """Execute groovy command"""
@@ -44,13 +45,24 @@ class GroovyCommand(Command):
             script_content = sys.stdin.read()
         else:
             print("Error: No Groovy script provided.", file=sys.stderr)
-            print("Usage: jks groovy <script-file.groovy>", file=sys.stderr)
+            print(
+                "Usage: jks groovy <script-file.groovy> [--yes-i-really-mean-it]",
+                file=sys.stderr,
+            )
             print("   or: echo \"println 'hi'\" | jks groovy", file=sys.stderr)
             return 1
 
         if not script_content.strip():
             print("Error: Groovy script is empty.", file=sys.stderr)
             return 1
+
+        if self.args and not self.args[0].startswith("-"):
+            operation_desc = f"execute groovy script '{self.args[0]}'"
+        else:
+            operation_desc = "execute groovy script from stdin"
+
+        if not self.require_confirmation(operation_desc):
+            return 0
 
         # Execute groovy command via Jenkins CLI
         # The '=' argument tells Jenkins CLI to read script from stdin
