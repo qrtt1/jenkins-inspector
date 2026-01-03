@@ -3,6 +3,7 @@
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from jenkins_tools.core import Command, DangerousCommandMixin, JenkinsConfig, JenkinsCLI
 
@@ -20,7 +21,7 @@ class DomainCommand(DangerousCommandMixin, Command):
     Domain management command dispatcher
 
     Handles: jenkee domain <action> [args...]
-    Actions: list
+    Actions: list, create
     """
 
     def __init__(self, args=None):
@@ -44,6 +45,8 @@ class DomainCommand(DangerousCommandMixin, Command):
 
         if action == "list":
             return self._list(action_args)
+        if action == "create":
+            return self._create(action_args)
 
         program_name = Path(sys.argv[0]).name if sys.argv else "jenkee"
         print(f"Error: Unknown domain action '{action}'", file=sys.stderr)
@@ -58,9 +61,11 @@ class DomainCommand(DangerousCommandMixin, Command):
         print("Actions:")
         print()
         print("  list                           List all credential domains")
+        print("  create <name> [--description]  Create a new credential domain")
         print()
         print("Examples:")
         print(f"  {program_name} domain list")
+        print(f"  {program_name} domain create staging --description=\"Staging credentials\" --yes-i-really-mean-it")
 
     def _list(self, args) -> int:
         """List all credentials domains"""
@@ -76,22 +81,10 @@ class DomainCommand(DangerousCommandMixin, Command):
             print("Usage: jenkee domain list", file=sys.stderr)
             return 1
 
-        cli = JenkinsCLI(config)
-        groovy_script = self._generate_list_script()
-        result = cli.run("groovy", "=", stdin_input=groovy_script)
-
-        if result.returncode != 0:
+        domains, error = self._get_domains(config)
+        if error:
             print("Error: Failed to list domains", file=sys.stderr)
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-            return 1
-
-        try:
-            domains = self._parse_domain_list(result.stdout)
-        except ValueError as exc:
-            print(f"Error: Failed to parse domain list output: {exc}", file=sys.stderr)
-            if result.stdout:
-                print(result.stdout, file=sys.stderr)
+            print(error, file=sys.stderr)
             return 1
 
         if not domains:
@@ -119,6 +112,63 @@ class DomainCommand(DangerousCommandMixin, Command):
         print(f"Total: {len(domains)} domains")
         return 0
 
+    def _create(self, args) -> int:
+        """Create a new credential domain"""
+        config = JenkinsConfig()
+
+        if not config.is_configured():
+            print("Error: Jenkins credentials not configured.", file=sys.stderr)
+            print("Run 'jenkee auth' to configure credentials.", file=sys.stderr)
+            return 1
+
+        domain_name, description, error = self._parse_create_args(args)
+        if error:
+            print(f"Error: {error}", file=sys.stderr)
+            print(
+                "Usage: jenkee domain create <domain-name> "
+                "[--description=<text>] [--yes-i-really-mean-it]",
+                file=sys.stderr,
+            )
+            return 1
+
+        if domain_name == "(global)":
+            print("Error: Cannot create the global domain.", file=sys.stderr)
+            return 1
+
+        domains, list_error = self._get_domains(config)
+        if list_error:
+            print("Error: Failed to check existing domains", file=sys.stderr)
+            print(list_error, file=sys.stderr)
+            return 1
+
+        if any(domain.name == domain_name for domain in domains):
+            print(f"Error: Domain '{domain_name}' already exists.", file=sys.stderr)
+            print("Run 'jenkee domain list' to see all domains.", file=sys.stderr)
+            return 1
+
+        if not self.require_confirmation(f"create domain '{domain_name}'"):
+            return 0
+
+        domain_xml = self._generate_domain_xml(domain_name, description)
+        cli = JenkinsCLI(config)
+        store_id = "system::system::jenkins"
+        result = cli.run(
+            "create-credentials-domain-by-xml",
+            store_id,
+            stdin_input=domain_xml,
+        )
+
+        if result.returncode != 0:
+            print(f"Error: Failed to create domain '{domain_name}'", file=sys.stderr)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            return 1
+
+        print(f"Created domain: {domain_name}")
+        if description:
+            print(f"  Description: {description}")
+        return 0
+
     def _generate_list_script(self) -> str:
         """Generate Groovy script for listing domains and credential counts"""
         return """
@@ -139,6 +189,34 @@ store.getDomains().each { domain ->
     println("${name}\\t${desc}\\t${count}")
 }
 """
+
+    def _generate_domain_xml(self, name: str, description: str) -> str:
+        """Generate XML payload for domain create/update"""
+        safe_name = escape(name)
+        safe_description = escape(description or "")
+        return (
+            "<com.cloudbees.plugins.credentials.domains.Domain>"
+            f"<name>{safe_name}</name>"
+            f"<description>{safe_description}</description>"
+            "<specifications/>"
+            "</com.cloudbees.plugins.credentials.domains.Domain>"
+        )
+
+    def _get_domains(self, config: JenkinsConfig) -> tuple[list[DomainInfo], str | None]:
+        """Fetch domain metadata from Jenkins"""
+        cli = JenkinsCLI(config)
+        groovy_script = self._generate_list_script()
+        result = cli.run("groovy", "=", stdin_input=groovy_script)
+
+        if result.returncode != 0:
+            return [], result.stderr or result.stdout or "Unknown error"
+
+        try:
+            domains = self._parse_domain_list(result.stdout)
+        except ValueError as exc:
+            return [], f"Failed to parse domain list output: {exc}"
+
+        return domains, None
 
     def _parse_domain_list(self, stdout: str) -> list[DomainInfo]:
         """Parse Groovy output into domain metadata"""
@@ -167,3 +245,31 @@ store.getDomains().each { domain ->
             )
 
         return domains
+
+    def _parse_create_args(self, args) -> tuple[str | None, str, str | None]:
+        """Parse domain create arguments"""
+        domain_name = None
+        description = ""
+
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg.startswith("--description="):
+                description = arg.split("=", 1)[1]
+            elif arg == "--description":
+                if i + 1 >= len(args):
+                    return None, "", "--description requires a value"
+                description = args[i + 1]
+                i += 1
+            elif arg.startswith("--"):
+                return None, "", f"Unknown option: {arg}"
+            elif domain_name is None:
+                domain_name = arg
+            else:
+                return None, "", f"Unexpected argument: {arg}"
+            i += 1
+
+        if not domain_name:
+            return None, "", "Missing domain name"
+
+        return domain_name, description, None

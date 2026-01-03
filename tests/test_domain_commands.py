@@ -5,6 +5,7 @@
 - domain list
 """
 import re
+import uuid
 
 
 def parse_domain_list(stdout: str) -> dict:
@@ -52,3 +53,28 @@ def test_domain_list_basic(run_jenkee_authed):
     assert domains["staging"]["count"] >= 1, "Staging domain should have credentials"
     assert domains["production"]["count"] == 0, "Production domain should be empty"
     assert domains["(global)"]["count"] >= 3, "Global domain should include test credentials"
+
+
+def test_domain_create_basic(run_jenkee_authed):
+    """測試建立 domain"""
+    domain_name = f"test-domain-{uuid.uuid4().hex[:8]}"
+    description = "Test domain created by tests"
+
+    result = run_jenkee_authed.run(
+        "domain",
+        "create",
+        domain_name,
+        "--description",
+        description,
+        "--yes-i-really-mean-it",
+    )
+
+    assert result.returncode == 0, f"domain create should succeed, got: {result.stderr}"
+    assert f"Created domain: {domain_name}" in result.stdout
+
+    list_result = run_jenkee_authed.run("domain", "list")
+    domains = parse_domain_list(list_result.stdout)
+
+    assert domain_name in domains, "Created domain should appear in list output"
+    assert domains[domain_name]["description"] == description
+    assert domains[domain_name]["count"] == 0
