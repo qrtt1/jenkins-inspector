@@ -15,7 +15,7 @@
 jenkee prompt
 ```
 
-如需在輸出中包含危險命令提示，請加上 `--ask-before-run-commands`。
+如需在輸出中包含危險命令提示，請加上 `--all`。
 危險命令預設需要互動式確認，若要用在自動化腳本，可加上 `--yes-i-really-mean-it` 跳過確認。
 
 ## 功能說明
@@ -67,7 +67,7 @@ $ jenkee prompt | grep -A 20 "常見使用情境"
 ### 顯示危險命令提示
 
 ```bash
-$ jenkee prompt --ask-before-run-commands
+$ jenkee prompt --all
 ```
 
 ## 輸出內容
@@ -106,7 +106,7 @@ $ jenkee prompt --ask-before-run-commands
 - `add-job-to-view` - 加入 job 到 view
 - `groovy` - 執行 Groovy script
 
-加上 `--ask-before-run-commands` 時，會額外列出危險命令提示與確認機制說明。
+加上 `--all` 時，會額外列出危險命令提示與確認機制說明。
 
 特別強調使用 `jenkee help <command>` 可查看每個命令的詳細文件。
 

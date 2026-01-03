@@ -16,11 +16,11 @@ class PromptCommand(Command):
 
         Args:
             args: List of command arguments (sys.argv[2:])
-                  Can include --ask-before-run-commands flag to show dangerous commands guidance
+                  Can include --all flag to show dangerous commands guidance
                   Can include --ignore-override flag to ignore custom prompt files
         """
         self.args = args or []
-        self.show_dangerous = "--ask-before-run-commands" in self.args
+        self.show_dangerous = "--all" in self.args
         self.ignore_override = "--ignore-override" in self.args
 
     def execute(self) -> int:
@@ -379,7 +379,7 @@ jenkee copy-job <source> <dest>
 """
         print(prompt_text.strip())
 
-        # 如果有 --ask-before-run-commands flag，顯示危險命令的說明
+        # 如果有 --all flag，顯示危險命令的說明
         if self.show_dangerous:
             dangerous_commands = """
 

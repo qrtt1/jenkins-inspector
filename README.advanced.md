@@ -25,7 +25,7 @@
 若要查看包含危險命令的完整命令列表，請使用：
 
 ```bash
-jenkee help --ask-before-run-commands
+jenkee help --all
 ```
 
 ## 使用注意事項

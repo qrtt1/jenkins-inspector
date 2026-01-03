@@ -100,8 +100,8 @@ pip install -e ".[dev]"
 >
 > 查看哪些命令需要特別注意：
 > ```bash
-> jenkee help --ask-before-run-commands
-> jenkee prompt --ask-before-run-commands
+> jenkee help --all
+> jenkee prompt --all
 > ```
 >
 > 詳細的危險命令說明請參考 [README.advanced.md](README.advanced.md)。
