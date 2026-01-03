@@ -379,30 +379,30 @@ jenkee copy-job <source> <dest>
 """
         print(prompt_text.strip())
 
-        # 如果有 --ask-before-run-commands flag，顯示未來危險命令的說明
+        # 如果有 --ask-before-run-commands flag，顯示危險命令的說明
         if self.show_dangerous:
-            future_dangerous_commands = """
+            dangerous_commands = """
 
 ---
 
-## ⚠️ 未來將加入的危險命令
+## ⚠️ 危險命令（需要確認）
 
-以下命令目前尚未實作，但未來會加入並需要使用者確認機制：
+以下命令會對 Jenkins 進行不可逆或影響重大的操作，預設需要互動式確認。
+若要用在自動化腳本，可加上 `--yes-i-really-mean-it` 跳過確認。
 
 - **delete-job**: 刪除 job（不可逆，會刪除所有 build 歷史）
 - **disable-job**: 停用 job（會影響 job 的可用性）
 - **enable-job**: 啟用 job（會恢復 job 的可用性）
 - **delete-builds**: 刪除 build 記錄（不可逆，會永久刪除 build 記錄）
+- **groovy**: 執行 Groovy script（最高風險）
 
-這些命令在實作後，使用前都必須：
+這些命令使用前都必須：
 1. 向使用者說明操作內容與影響
 2. 取得使用者明確同意
 3. 確認操作的必要性
 
-**註：** `groovy` 命令已經實作，請參考上方的「⚠️ groovy 命令 - 特別警告」區段。
-
 ---
 """
-            print(future_dangerous_commands)
+            print(dangerous_commands)
 
         return 0
