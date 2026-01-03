@@ -78,3 +78,42 @@ def test_domain_create_basic(run_jenkee_authed):
     assert domain_name in domains, "Created domain should appear in list output"
     assert domains[domain_name]["description"] == description
     assert domains[domain_name]["count"] == 0
+
+
+def test_domain_update_rename_and_description(run_jenkee_authed):
+    """測試更新 domain 名稱與描述"""
+    domain_name = f"test-update-domain-{uuid.uuid4().hex[:8]}"
+    new_name = f"{domain_name}-renamed"
+    description = "Original description"
+    new_description = "Updated description"
+
+    create_result = run_jenkee_authed.run(
+        "domain",
+        "create",
+        domain_name,
+        "--description",
+        description,
+        "--yes-i-really-mean-it",
+    )
+    assert create_result.returncode == 0, f"domain create should succeed, got: {create_result.stderr}"
+
+    update_result = run_jenkee_authed.run(
+        "domain",
+        "update",
+        domain_name,
+        "--new-name",
+        new_name,
+        "--description",
+        new_description,
+        "--yes-i-really-mean-it",
+    )
+
+    assert update_result.returncode == 0, f"domain update should succeed, got: {update_result.stderr}"
+    assert f"Updated domain: {new_name}" in update_result.stdout
+
+    list_result = run_jenkee_authed.run("domain", "list")
+    domains = parse_domain_list(list_result.stdout)
+
+    assert domain_name not in domains, "Old domain name should be replaced after rename"
+    assert new_name in domains, "Renamed domain should appear in list output"
+    assert domains[new_name]["description"] == new_description
