@@ -18,6 +18,7 @@ class DeleteBuildsCommand(DangerousCommandMixin, Command):
                   Second argument is build range (single number or "start-end")
         """
         self.args = args or []
+        super().__init__()
 
     def execute(self) -> int:
         """Execute delete-builds command"""
@@ -29,8 +30,8 @@ class DeleteBuildsCommand(DangerousCommandMixin, Command):
             print(f"Run 'jenkee auth' to configure credentials.", file=sys.stderr)
             return 1
 
-        # Parse arguments
-        if not self.args:
+        # Parse arguments (args already filtered by DangerousCommandMixin)
+        if len(self.args) < 2:
             print("Error: Missing required arguments", file=sys.stderr)
             print(
                 "Usage: jenkee delete-builds <job-name> <build-range> [--yes-i-really-mean-it]",
@@ -42,24 +43,11 @@ class DeleteBuildsCommand(DangerousCommandMixin, Command):
             print("  - Build range: 100-150", file=sys.stderr)
             return 1
 
-        filtered_args = self.filter_confirmation_flag(self.args)
-        if len(filtered_args) < 2:
-            print("Error: Missing required arguments", file=sys.stderr)
-            print(
-                "Usage: jenkee delete-builds <job-name> <build-range> [--yes-i-really-mean-it]",
-                file=sys.stderr,
-            )
-            print("", file=sys.stderr)
-            print("Build range can be:", file=sys.stderr)
-            print("  - Single build number: 123", file=sys.stderr)
-            print("  - Build range: 100-150", file=sys.stderr)
-            return 1
-
-        job_name = filtered_args[0]
-        build_range = filtered_args[1]
+        job_name = self.args[0]
+        build_range = self.args[1]
 
         operation_desc = f"delete build(s) {build_range} for job '{job_name}'"
-        if not self.require_confirmation(self.args, operation_desc):
+        if not self.require_confirmation(operation_desc):
             return 0
 
         # Execute delete-builds command
