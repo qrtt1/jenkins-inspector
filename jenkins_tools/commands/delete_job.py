@@ -2,10 +2,10 @@
 
 import sys
 
-from jenkins_tools.core import Command, JenkinsConfig, JenkinsCLI
+from jenkins_tools.core import Command, DangerousCommandMixin, JenkinsConfig, JenkinsCLI
 
 
-class DeleteJobCommand(Command):
+class DeleteJobCommand(DangerousCommandMixin, Command):
     """Delete one or more Jenkins jobs"""
 
     def __init__(self, args=None):
@@ -17,6 +17,7 @@ class DeleteJobCommand(Command):
                   One or more job names to delete
         """
         self.args = args or []
+        super().__init__()
 
     def execute(self) -> int:
         """Execute delete-job command"""
@@ -28,13 +29,23 @@ class DeleteJobCommand(Command):
             print(f"Run 'jenkee auth' to configure credentials.", file=sys.stderr)
             return 1
 
-        # Parse arguments
+        # Parse arguments (args already filtered by DangerousCommandMixin)
         if not self.args:
             print("Error: Missing job name(s)", file=sys.stderr)
-            print("Usage: jenkee delete-job <job-name> [job-name ...]", file=sys.stderr)
+            print("Usage: jenkee delete-job <job-name> [job-name ...] [--yes-i-really-mean-it]", file=sys.stderr)
             return 1
 
         job_names = self.args
+
+        # Prepare operation description for confirmation
+        if len(job_names) == 1:
+            operation_desc = f"delete job '{job_names[0]}'"
+        else:
+            operation_desc = f"delete {len(job_names)} job(s)"
+
+        # Require confirmation
+        if not self.require_confirmation(operation_desc):
+            return 0
 
         # Delete each job
         cli = JenkinsCLI(config)

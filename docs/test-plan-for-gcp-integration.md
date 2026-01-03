@@ -162,34 +162,62 @@ jenkee gcp credential update nonexistent-id ~/service-account-key.json
 
 #### 1.5 刪除 GCP Credential
 
+**測試 1: 互動式確認（預設行為）**
+
 ```bash
 jenkee gcp credential delete my-gcp-sa
+# 提示：Are you sure you want to delete credential 'my-gcp-sa'? (y/N): y
 ```
 
 **預期結果**：
 - Exit code: 0
-- 顯示刪除成功訊息
+- 顯示確認提示
+- 輸入 y 後顯示刪除成功訊息
 - Credential 從 Jenkins 中移除
 
 **驗證點**：
+- [ ] 顯示互動式確認提示
+- [ ] 確認提示清楚明確
 - [ ] 成功刪除 credential
 - [ ] 刪除後無法在 list 中看到
 - [ ] 刪除後無法 describe
 
-**安全性考量**：
+**測試 2: 取消刪除**
 
 ```bash
-# 需要確認的刪除操作（建議）
-jenkee gcp credential delete my-gcp-sa --confirm
-
-# 或互動式確認
 jenkee gcp credential delete my-gcp-sa
-# 提示：Are you sure you want to delete credential 'my-gcp-sa'? (y/N)
+# 提示：Are you sure you want to delete credential 'my-gcp-sa'? (y/N): n
 ```
 
+**預期結果**：
+- Exit code: 0
+- 顯示 "Operation cancelled." 或 "Deletion cancelled."
+- Credential 仍然存在
+
 **驗證點**：
-- [ ] 提供確認機制避免誤刪
-- [ ] 確認提示清楚明確
+- [ ] 輸入 N 後取消操作
+- [ ] 顯示取消訊息
+- [ ] Credential 仍在 list 中
+- [ ] 可以繼續 describe
+
+**測試 3: 使用確認 Flag（自動化腳本）**
+
+```bash
+# 跳過互動式確認，直接執行
+jenkee gcp credential delete my-gcp-sa --yes-i-really-mean-it
+```
+
+**預期結果**：
+- Exit code: 0
+- 不顯示確認提示
+- 直接刪除成功
+- Credential 從 Jenkins 中移除
+
+**驗證點**：
+- [ ] 不顯示互動式確認提示
+- [ ] 直接執行刪除
+- [ ] 成功刪除 credential
+- [ ] 適合用於自動化腳本
 
 ### Phase 2: Freestyle Job 整合測試
 
@@ -374,8 +402,8 @@ jenkee gcp credential list
 # 2. 確認要刪除的 credential
 jenkee gcp credential describe old-gcp-sa
 
-# 3. 刪除
-jenkee gcp credential delete old-gcp-sa --confirm
+# 3. 刪除（使用 flag 跳過確認，適合自動化腳本）
+jenkee gcp credential delete old-gcp-sa --yes-i-really-mean-it
 
 # 4. 驗證已刪除
 jenkee gcp credential list | grep old-gcp-sa || echo "已刪除"

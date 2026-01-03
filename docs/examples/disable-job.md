@@ -26,6 +26,7 @@ jenkee disable-job <job-name1> <job-name2> [job-name3 ...]
 | 參數 | 說明 | 必填 |
 |------|------|------|
 | `<job-name>` | Job 名稱（可指定多個） | 是 |
+| `--yes-i-really-mean-it` | 跳過互動式確認，直接執行（適合自動化腳本） | 否 |
 
 ## 功能說明
 
@@ -38,10 +39,27 @@ jenkee disable-job <job-name1> <job-name2> [job-name3 ...]
 
 ## 執行範例
 
-### 停用單一 Job
+### 互動式確認（預設行為）
 
 ```bash
 $ jenkee disable-job old-production-job
+Are you sure you want to disable job 'old-production-job'? (y/N): y
+✓ Successfully disabled job 'old-production-job'
+```
+
+### 取消停用
+
+```bash
+$ jenkee disable-job old-production-job
+Are you sure you want to disable job 'old-production-job'? (y/N): n
+Operation cancelled.
+```
+
+### 使用確認 Flag（自動化腳本）
+
+```bash
+# 跳過互動式確認，直接執行
+$ jenkee disable-job old-production-job --yes-i-really-mean-it
 ✓ Successfully disabled job 'old-production-job'
 ```
 
@@ -49,6 +67,7 @@ $ jenkee disable-job old-production-job
 
 ```bash
 $ jenkee disable-job job-a job-b job-c
+Are you sure you want to disable 3 job(s)? (y/N): y
 ✓ Successfully disabled 3 job(s)
   - job-a
   - job-b

@@ -26,6 +26,7 @@ jenkee enable-job <job-name1> <job-name2> [job-name3 ...]
 | 參數 | 說明 | 必填 |
 |------|------|------|
 | `<job-name>` | Job 名稱（可指定多個） | 是 |
+| `--yes-i-really-mean-it` | 跳過互動式確認，直接執行（適合自動化腳本） | 否 |
 
 ## 功能說明
 
@@ -37,10 +38,27 @@ jenkee enable-job <job-name1> <job-name2> [job-name3 ...]
 
 ## 執行範例
 
-### 啟用單一 Job
+### 互動式確認（預設行為）
 
 ```bash
 $ jenkee enable-job production-deploy
+Are you sure you want to enable job 'production-deploy'? (y/N): y
+✓ Successfully enabled job 'production-deploy'
+```
+
+### 取消啟用
+
+```bash
+$ jenkee enable-job production-deploy
+Are you sure you want to enable job 'production-deploy'? (y/N): n
+Operation cancelled.
+```
+
+### 使用確認 Flag（自動化腳本）
+
+```bash
+# 跳過互動式確認，直接執行
+$ jenkee enable-job production-deploy --yes-i-really-mean-it
 ✓ Successfully enabled job 'production-deploy'
 ```
 
@@ -48,6 +66,7 @@ $ jenkee enable-job production-deploy
 
 ```bash
 $ jenkee enable-job job-a job-b job-c
+Are you sure you want to enable 3 job(s)? (y/N): y
 ✓ Successfully enabled 3 job(s)
   - job-a
   - job-b

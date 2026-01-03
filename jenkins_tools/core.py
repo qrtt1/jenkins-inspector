@@ -29,6 +29,64 @@ class Command(ABC):
         pass
 
 
+class DangerousCommandMixin:
+    """Mixin for commands that require user confirmation before execution
+
+    This mixin automatically processes the --yes-i-really-mean-it flag:
+    - Removes the flag from self.args
+    - Stores the skip confirmation state internally
+    - Provides require_confirmation() method that checks the stored state
+
+    Usage:
+        class MyCommand(DangerousCommandMixin, Command):
+            def __init__(self, args=None):
+                self.args = args or []
+                super().__init__()  # Important: call after setting self.args
+
+            def execute(self):
+                # self.args is already filtered
+                if not self.require_confirmation("delete something"):
+                    return 0
+                # ... proceed with operation
+    """
+
+    def __init__(self, *args, **kwargs):
+        # Process confirmation flag before calling parent __init__
+        self._skip_confirmation = False
+        if hasattr(self, 'args') and isinstance(self.args, list):
+            self._skip_confirmation = "--yes-i-really-mean-it" in self.args
+            self.args = [arg for arg in self.args if arg != "--yes-i-really-mean-it"]
+
+        # Call parent class __init__ if it exists
+        super().__init__(*args, **kwargs)
+
+    def require_confirmation(self, operation_description: str) -> bool:
+        """
+        Check for confirmation or prompt for interactive confirmation
+
+        Args:
+            operation_description: Description of the operation (e.g., "delete job 'test-job'")
+
+        Returns:
+            True if confirmed (either via flag or user input), False if cancelled
+        """
+        # Check if confirmation flag was present
+        if self._skip_confirmation:
+            return True
+
+        # Interactive confirmation
+        try:
+            response = input(f"Are you sure you want to {operation_description}? (y/N): ")
+            if response.lower() in ('y', 'yes'):
+                return True
+            else:
+                print("Operation cancelled.")
+                return False
+        except (EOFError, KeyboardInterrupt):
+            print("\nOperation cancelled.")
+            return False
+
+
 class JenkinsConfig:
     """Manage Jenkins configuration"""
 
