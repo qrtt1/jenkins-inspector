@@ -69,6 +69,8 @@ def parse_credentials_list(stdout: str) -> List[CredentialsDomain]:
         # Domain header
         domain_match = re.match(r'===\s*Domain:\s*(.+?)\s*===', line)
         if domain_match:
+            if current_credential and current_domain:
+                current_domain.credentials.append(current_credential)
             if current_domain:
                 domains.append(current_domain)
             domain_name = domain_match.group(1)

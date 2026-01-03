@@ -33,6 +33,7 @@ class HelpCommand(Command):
         "enable-job": "Enable one or more jobs",
         "delete-builds": "Delete build records (IRREVERSIBLE)",
         "groovy": "Execute a Groovy script on the server",
+        "domain": "Manage credentials domains",
         "prompt": "Display AI agent guide for using jenkee",
         "help": "Show help information",
     }
