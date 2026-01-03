@@ -54,12 +54,12 @@ class HelpCommand(Command):
             args: List of command arguments (sys.argv[2:])
                   If empty, show command list
                   If contains command name, show detailed help for that command
-                  Can include --ask-before-run-commands flag to show dangerous commands
+                  Can include --all flag to show dangerous commands
         """
         self.args = args or []
-        self.show_dangerous = "--ask-before-run-commands" in self.args
+        self.show_dangerous = "--all" in self.args
         # 移除 flag，只保留命令名稱
-        self.args = [arg for arg in self.args if arg != "--ask-before-run-commands"]
+        self.args = [arg for arg in self.args if arg != "--all"]
 
     def execute(self) -> int:
         """Execute help command"""
@@ -98,7 +98,7 @@ class HelpCommand(Command):
             desc = self.COMMAND_DESCRIPTIONS[cmd]
             print(f"  {cmd:25s} {desc}")
 
-        # 如果有 --ask-before-run-commands flag，顯示危險命令
+        # 如果有 --all flag，顯示危險命令
         if self.show_dangerous and dangerous_commands:
             print()
             print("Dangerous commands (require user confirmation):")

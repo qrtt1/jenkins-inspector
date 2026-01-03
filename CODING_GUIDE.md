@@ -195,7 +195,7 @@ jenkins-inspector/
 
 1. **標記為危險命令**
    - 在 `commands/help.py` 的 `DANGEROUS_COMMANDS` 集合中加入命令名稱
-   - 這會讓命令在一般 `help` 中隱藏，只在 `help --ask-before-run-commands` 顯示
+   - 這會讓命令在一般 `help` 中隱藏，只在 `help --all` 顯示
 
 2. **文件中加入警告區段**
    - 在 `docs/examples/<command>.md` 開頭加入 `⚠️ 警告` 區段
@@ -358,4 +358,4 @@ black --check jenkins_tools/
 - [ ] 在文件中加入 `⚠️ 警告` 區段
 - [ ] 在文件中加入 `## AI Agent 使用限制` 區段
 - [ ] 提供安全使用的最佳實踐建議
-- [ ] 測試 `jks help --ask-before-run-commands` 顯示危險命令
+- [ ] 測試 `jks help --all` 顯示危險命令

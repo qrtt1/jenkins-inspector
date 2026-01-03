@@ -15,6 +15,9 @@
 jenkee prompt
 ```
 
+如需在輸出中包含危險命令提示，請加上 `--all`。
+危險命令預設需要互動式確認，若要用在自動化腳本，可加上 `--yes-i-really-mean-it` 跳過確認。
+
 ## 功能說明
 
 此命令會輸出一份結構化的指引文件，包含：
@@ -61,6 +64,12 @@ $ jenkee prompt | grep -A 10 "credentials"
 $ jenkee prompt | grep -A 20 "常見使用情境"
 ```
 
+### 顯示危險命令提示
+
+```bash
+$ jenkee prompt --all
+```
+
 ## 輸出內容
 
 ### 1. 關於 jenkee
@@ -95,6 +104,9 @@ $ jenkee prompt | grep -A 20 "常見使用情境"
 - `copy-job` - 複製 job
 - `update-job` - 更新 job
 - `add-job-to-view` - 加入 job 到 view
+- `groovy` - 執行 Groovy script
+
+加上 `--all` 時，會額外列出危險命令提示與確認機制說明。
 
 特別強調使用 `jenkee help <command>` 可查看每個命令的詳細文件。
 

@@ -88,6 +88,7 @@ pip install -e ".[dev]"
 > **使用 AI Agent 的重要提醒**
 >
 > jenkee 設計來讓 AI agent 幫你操作 Jenkins。但有些操作會真的改變你的 Jenkins 環境，像是建立 job、觸發 build、刪除資源。
+> 危險命令需要互動式確認；若要用在自動化腳本，請加上 `--yes-i-really-mean-it` 以跳過確認。
 >
 > **強烈建議你在「需要逐一授權」的模式下使用 AI agent。** 每次 AI 要執行命令時，你都應該先看過才放行。特別是那些會寫入或刪除的操作。
 >
@@ -99,8 +100,8 @@ pip install -e ".[dev]"
 >
 > 查看哪些命令需要特別注意：
 > ```bash
-> jenkee help --ask-before-run-commands
-> jenkee prompt --ask-before-run-commands
+> jenkee help --all
+> jenkee prompt --all
 > ```
 >
 > 詳細的危險命令說明請參考 [README.advanced.md](README.advanced.md)。
@@ -245,4 +246,3 @@ jenkee auth
 - 程式碼風格一致
 - 功能完整實作（包含 help、prompt、example 文件）
 - 通過所有整合測試
-
