@@ -117,3 +117,54 @@ def test_domain_update_rename_and_description(run_jenkee_authed):
     assert domain_name not in domains, "Old domain name should be replaced after rename"
     assert new_name in domains, "Renamed domain should appear in list output"
     assert domains[new_name]["description"] == new_description
+
+
+def test_domain_describe_empty_domain(run_jenkee_authed):
+    """測試查看空 domain 詳細資訊"""
+    domain_name = f"test-describe-domain-{uuid.uuid4().hex[:8]}"
+    description = "Describe test domain"
+
+    create_result = run_jenkee_authed.run(
+        "domain",
+        "create",
+        domain_name,
+        "--description",
+        description,
+        "--yes-i-really-mean-it",
+    )
+    assert create_result.returncode == 0, f"domain create should succeed, got: {create_result.stderr}"
+
+    describe_result = run_jenkee_authed.run("domain", "describe", domain_name)
+
+    assert describe_result.returncode == 0, f"domain describe should succeed, got: {describe_result.stderr}"
+    assert f"=== Domain: {domain_name} ===" in describe_result.stdout
+    assert f"Description: {description}" in describe_result.stdout
+    assert "Credentials: 0" in describe_result.stdout
+    assert "(no credentials)" in describe_result.stdout
+
+
+def test_domain_delete_empty_domain(run_jenkee_authed):
+    """測試刪除空 domain"""
+    domain_name = f"test-delete-domain-{uuid.uuid4().hex[:8]}"
+
+    create_result = run_jenkee_authed.run(
+        "domain",
+        "create",
+        domain_name,
+        "--yes-i-really-mean-it",
+    )
+    assert create_result.returncode == 0, f"domain create should succeed, got: {create_result.stderr}"
+
+    delete_result = run_jenkee_authed.run(
+        "domain",
+        "delete",
+        domain_name,
+        "--yes-i-really-mean-it",
+    )
+    assert delete_result.returncode == 0, f"domain delete should succeed, got: {delete_result.stderr}"
+    assert f"Deleted domain: {domain_name}" in delete_result.stdout
+
+    list_result = run_jenkee_authed.run("domain", "list")
+    domains = parse_domain_list(list_result.stdout)
+
+    assert domain_name not in domains, "Deleted domain should not appear in list output"

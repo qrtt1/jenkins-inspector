@@ -1,6 +1,7 @@
 """Domain management subcommands"""
 
 import sys
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -21,7 +22,7 @@ class DomainCommand(DangerousCommandMixin, Command):
     Domain management command dispatcher
 
     Handles: jenkee domain <action> [args...]
-    Actions: list, create, update
+    Actions: list, create, update, delete, describe
     """
 
     def __init__(self, args=None):
@@ -49,6 +50,10 @@ class DomainCommand(DangerousCommandMixin, Command):
             return self._create(action_args)
         if action == "update":
             return self._update(action_args)
+        if action == "delete":
+            return self._delete(action_args)
+        if action == "describe":
+            return self._describe(action_args)
 
         program_name = Path(sys.argv[0]).name if sys.argv else "jenkee"
         print(f"Error: Unknown domain action '{action}'", file=sys.stderr)
@@ -65,12 +70,16 @@ class DomainCommand(DangerousCommandMixin, Command):
         print("  list                                                        List all credential domains")
         print("  create <name> [--description=<text>]                       Create a new credential domain")
         print("  update <name> [--description=<text>] [--new-name=<name>]  Update a credential domain")
+        print("  delete <name> [--force]                                     Delete a credential domain")
+        print("  describe <name>                                             Show domain details and credentials")
         print()
         print("Examples:")
         print(f"  {program_name} domain list")
         print(f"  {program_name} domain create staging --description=\"Staging credentials\" --yes-i-really-mean-it")
         print(f"  {program_name} domain update staging --description=\"Updated description\" --yes-i-really-mean-it")
         print(f"  {program_name} domain update staging --new-name=staging-v2 --yes-i-really-mean-it")
+        print(f"  {program_name} domain delete staging --yes-i-really-mean-it")
+        print(f"  {program_name} domain describe staging")
 
     def _list(self, args) -> int:
         """List all credentials domains"""
@@ -250,6 +259,133 @@ class DomainCommand(DangerousCommandMixin, Command):
             print(f"  Description: {final_description}")
         return 0
 
+    def _delete(self, args) -> int:
+        """Delete a credential domain"""
+        config = JenkinsConfig()
+
+        if not config.is_configured():
+            print("Error: Jenkins credentials not configured.", file=sys.stderr)
+            print("Run 'jenkee auth' to configure credentials.", file=sys.stderr)
+            return 1
+
+        domain_name, force, error = self._parse_delete_args(args)
+        if error:
+            print(f"Error: {error}", file=sys.stderr)
+            print(
+                "Usage: jenkee domain delete <domain-name> "
+                "[--yes-i-really-mean-it] [--force]",
+                file=sys.stderr,
+            )
+            return 1
+
+        if domain_name == "(global)":
+            print("Error: Cannot delete the global domain.", file=sys.stderr)
+            return 1
+
+        domains, list_error = self._get_domains(config)
+        if list_error:
+            print("Error: Failed to check existing domains", file=sys.stderr)
+            print(list_error, file=sys.stderr)
+            return 1
+
+        current_domain = next((domain for domain in domains if domain.name == domain_name), None)
+        if not current_domain:
+            print(f"Error: Domain '{domain_name}' does not exist.", file=sys.stderr)
+            print("Run 'jenkee domain list' to see all domains.", file=sys.stderr)
+            return 1
+
+        credentials, cred_error = self._get_domain_credentials(config, domain_name)
+        if cred_error:
+            print("Error: Failed to check domain credentials", file=sys.stderr)
+            print(cred_error, file=sys.stderr)
+            return 1
+
+        credential_count = current_domain.credential_count
+        if credential_count > 0 and not force:
+            print(f"Warning: Domain '{domain_name}' contains {credential_count} credentials.")
+            print()
+            print("Credentials in this domain:")
+            for cred_id, _cred_type in credentials:
+                print(f"  - {cred_id}")
+            if not credentials:
+                print("  (credential details unavailable)")
+            print()
+            print("Deleting this domain will also delete all credentials in it.")
+            print("To proceed, add the --force flag:")
+            print(f"  jenkee domain delete {domain_name} --yes-i-really-mean-it --force")
+            return 1
+
+        if not self.require_confirmation(f"delete domain '{domain_name}'"):
+            return 0
+
+        cli = JenkinsCLI(config)
+        store_id = "system::system::jenkins"
+        result = cli.run("delete-credentials-domain", store_id, domain_name)
+
+        if result.returncode != 0:
+            print(f"Error: Failed to delete domain '{domain_name}'", file=sys.stderr)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            return 1
+
+        print(f"Deleted domain: {domain_name}")
+        return 0
+
+    def _describe(self, args) -> int:
+        """Describe a credential domain"""
+        config = JenkinsConfig()
+
+        if not config.is_configured():
+            print("Error: Jenkins credentials not configured.", file=sys.stderr)
+            print("Run 'jenkee auth' to configure credentials.", file=sys.stderr)
+            return 1
+
+        if len(args) != 1:
+            print("Error: Domain name is required.", file=sys.stderr)
+            print("Usage: jenkee domain describe <domain-name>", file=sys.stderr)
+            return 1
+
+        domain_name = args[0]
+
+        domains, list_error = self._get_domains(config)
+        if list_error:
+            print("Error: Failed to check existing domains", file=sys.stderr)
+            print(list_error, file=sys.stderr)
+            return 1
+
+        current_domain = next((domain for domain in domains if domain.name == domain_name), None)
+        if not current_domain:
+            print(f"Error: Domain '{domain_name}' does not exist.", file=sys.stderr)
+            print("Run 'jenkee domain list' to see all domains.", file=sys.stderr)
+            return 1
+
+        credentials, cred_error = self._get_domain_credentials(config, domain_name)
+        if cred_error:
+            print("Error: Failed to describe domain", file=sys.stderr)
+            print(cred_error, file=sys.stderr)
+            return 1
+
+        description = current_domain.description.strip()
+        if not description:
+            if domain_name == "(global)":
+                description = "Global credentials domain"
+            else:
+                description = "(no description)"
+
+        print(f"=== Domain: {domain_name} ===")
+        print(f"Name: {domain_name}")
+        print(f"Description: {description}")
+        print(f"Credentials: {len(credentials)}")
+        print()
+        print("Credentials in this domain:")
+        if not credentials:
+            print("  (no credentials)")
+            return 0
+
+        for cred_id, cred_type in credentials:
+            print(f"  - {cred_id} ({cred_type})")
+        return 0
+
     def _generate_list_script(self) -> str:
         """Generate Groovy script for listing domains and credential counts"""
         return """
@@ -396,3 +532,70 @@ store.getDomains().each { domain ->
             return None, None, None, "No updates provided"
 
         return domain_name, new_name, description, None
+
+    def _parse_delete_args(self, args) -> tuple[str | None, bool, str | None]:
+        """Parse domain delete arguments"""
+        domain_name = None
+        force = False
+
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg == "--force":
+                force = True
+            elif arg.startswith("--"):
+                return None, False, f"Unknown option: {arg}"
+            elif domain_name is None:
+                domain_name = arg
+            else:
+                return None, False, f"Unexpected argument: {arg}"
+            i += 1
+
+        if not domain_name:
+            return None, False, "Missing domain name"
+
+        return domain_name, force, None
+
+    def _get_domain_credentials(
+        self,
+        config: JenkinsConfig,
+        domain_name: str,
+    ) -> tuple[list[tuple[str, str]], str | None]:
+        """Fetch credential IDs and types for a specific domain"""
+        cli = JenkinsCLI(config)
+        store_id = "system::system::jenkins"
+        result = cli.run("list-credentials-as-xml", store_id)
+
+        if result.returncode != 0:
+            return [], result.stderr or result.stdout or "Unknown error"
+
+        try:
+            root = ET.fromstring(result.stdout)
+        except ET.ParseError as exc:
+            return [], f"Failed to parse credentials XML: {exc}"
+
+        for domain_creds in root.findall(
+            ".//com.cloudbees.plugins.credentials.domains.DomainCredentials"
+        ):
+            domain_elem = domain_creds.find("domain")
+            if domain_elem is None:
+                continue
+            name_elem = domain_elem.find("name")
+            name = name_elem.text if name_elem is not None else "(global)"
+            if name != domain_name:
+                continue
+
+            credentials = []
+            credentials_elem = domain_creds.find("credentials")
+            if credentials_elem is None:
+                return [], None
+
+            for cred in credentials_elem:
+                cred_id = cred.find("id")
+                cred_id_text = cred_id.text if cred_id is not None else "(no id)"
+                cred_type = cred.tag.split(".")[-1]
+                credentials.append((cred_id_text, cred_type))
+
+            return credentials, None
+
+        return [], None
