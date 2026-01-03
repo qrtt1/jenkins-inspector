@@ -13,6 +13,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11', '3.13']
+        jenkins-image: ['jenkins/jenkins:2.516.2-jdk17', 'jenkins/jenkins:lts-jdk17']
       fail-fast: false
 
     steps:
@@ -43,6 +44,8 @@ jobs:
         fi
 
     - name: Run tests with pytest
+      env:
+        JENKINS_IMAGE: ${{ matrix.jenkins-image }}
       run: |
         pytest -v --cov=jenkins_tools --cov-report=term
 

@@ -146,9 +146,19 @@ def jenkins_container(jenkins_init_dir: Path) -> Generator[DockerContainer, None
     dockerfile_path = jenkins_init_dir / "Dockerfile"
     assert dockerfile_path.exists(), f"Dockerfile not found at {dockerfile_path}"
 
+    jenkins_image = os.environ.get("JENKINS_IMAGE", "jenkins/jenkins:lts-jdk17")
+
     # 使用 subprocess 建立 image
     build_result = subprocess.run(
-        ["docker", "build", "-t", "jenkins-inspector:test", str(jenkins_init_dir)],
+        [
+            "docker",
+            "build",
+            "-t",
+            "jenkins-inspector:test",
+            "--build-arg",
+            f"JENKINS_IMAGE={jenkins_image}",
+            str(jenkins_init_dir),
+        ],
         capture_output=True,
         text=True
     )
