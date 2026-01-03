@@ -238,6 +238,6 @@ echo "=========================================="
         run_jenkee_authed.build_command(
             "gcp", "credential", "delete",
             credential_id,
-            "--confirm"
+            "--yes-i-really-mean-it"
         ).allow_failure().run()
         print(f"✓ Deleted credential: {credential_id}")

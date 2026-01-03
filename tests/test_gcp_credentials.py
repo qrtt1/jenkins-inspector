@@ -202,7 +202,7 @@ def test_create_gcp_credential(run_jenkee_authed, gcp_key_files, gcp_sa1_info):
         # Cleanup
         run_jenkee_authed.build_command(
             "gcp", "credential", "delete",
-            credential_id, "--confirm"
+            credential_id, "--yes-i-really-mean-it"
         ).allow_failure().run()
 
 
@@ -232,7 +232,7 @@ def test_create_duplicate_gcp_credential_fails(run_jenkee_authed, gcp_key_files)
         # Cleanup
         run_jenkee_authed.build_command(
             "gcp", "credential", "delete",
-            credential_id, "--confirm"
+            credential_id, "--yes-i-really-mean-it"
         ).allow_failure().run()
 
 
@@ -329,7 +329,7 @@ def test_list_gcp_credentials(run_jenkee_authed, gcp_key_files):
         # Cleanup
         run_jenkee_authed.build_command(
             "gcp", "credential", "delete",
-            credential_id, "--confirm"
+            credential_id, "--yes-i-really-mean-it"
         ).allow_failure().run()
 
 
@@ -364,7 +364,7 @@ def test_describe_gcp_credential(run_jenkee_authed, gcp_key_files):
         # Cleanup
         run_jenkee_authed.build_command(
             "gcp", "credential", "delete",
-            credential_id, "--confirm"
+            credential_id, "--yes-i-really-mean-it"
         ).allow_failure().run()
 
 
@@ -399,7 +399,7 @@ def test_describe_gcp_credential_with_secret(run_jenkee_authed, gcp_key_files, g
         # Cleanup
         run_jenkee_authed.build_command(
             "gcp", "credential", "delete",
-            credential_id, "--confirm"
+            credential_id, "--yes-i-really-mean-it"
         ).allow_failure().run()
 
 
@@ -450,7 +450,7 @@ def test_update_gcp_credential(run_jenkee_authed, gcp_key_files, gcp_sa1_info, g
         # Cleanup
         run_jenkee_authed.build_command(
             "gcp", "credential", "delete",
-            credential_id, "--confirm"
+            credential_id, "--yes-i-really-mean-it"
         ).allow_failure().run()
 
 
@@ -475,7 +475,7 @@ def test_update_nonexistent_credential_fails(run_jenkee_authed, gcp_key_files):
 # ============================================================================
 
 def test_delete_gcp_credential(run_jenkee_authed, gcp_key_files):
-    """測試刪除 GCP credential（使用 --confirm flag）"""
+    """測試刪除 GCP credential（使用 --yes-i-really-mean-it flag）"""
     # Arrange: 先建立一個 credential
     credential_id = "test-delete-gcp-cred"
     result = run_jenkee_authed.run(
@@ -485,12 +485,85 @@ def test_delete_gcp_credential(run_jenkee_authed, gcp_key_files):
     )
     assert result.returncode == 0
 
-    # Act: 刪除 credential（使用 --confirm 跳過互動式確認）
+    # Act: 刪除 credential（使用 --yes-i-really-mean-it 跳過互動式確認）
     result = run_jenkee_authed.run(
         "gcp", "credential", "delete",
         credential_id,
-        "--confirm"
+        "--yes-i-really-mean-it"
     )
+
+    # Assert: 驗證刪除成功
+    assert result.returncode == 0, f"Failed to delete GCP credential: {result.stderr}"
+    assert f"Deleted GCP credential: {credential_id}" in result.stdout
+
+    # Verify: 驗證 credential 確實被刪除
+    result = run_jenkee_authed.build_command(
+        "gcp", "credential", "describe", credential_id
+    ).must_fail().run()
+    assert result.returncode != 0
+    assert "not found" in result.stderr.lower()
+
+
+def test_delete_gcp_credential_with_confirmation_cancelled(run_jenkee_authed, gcp_key_files):
+    """
+    測試取消刪除 GCP credential（模擬輸入 n）
+
+    對應文件中的「測試 2: 取消刪除」
+    """
+    # Arrange: 先建立一個 credential
+    credential_id = "test-delete-gcp-cred-cancel"
+    result = run_jenkee_authed.run(
+        "gcp", "credential", "create",
+        credential_id,
+        str(gcp_key_files['sa1'])
+    )
+    assert result.returncode == 0
+
+    try:
+        # Act: 嘗試刪除但取消（模擬輸入 'n'）
+        result = run_jenkee_authed.build_command(
+            "gcp", "credential", "delete",
+            credential_id
+        ).with_stdin("n\n").run()
+
+        # Assert: 驗證返回 0（取消不是錯誤）
+        assert result.returncode == 0, f"Should return 0 when cancelled, got: {result.returncode}"
+        assert "cancelled" in result.stdout.lower() or "canceled" in result.stdout.lower(), \
+            "Should show cancellation message"
+
+        # Verify: credential 仍然存在
+        describe_result = run_jenkee_authed.run(
+            "gcp", "credential", "describe", credential_id
+        )
+        assert describe_result.returncode == 0, "Credential should still exist after cancellation"
+    finally:
+        # Cleanup
+        run_jenkee_authed.build_command(
+            "gcp", "credential", "delete",
+            credential_id, "--yes-i-really-mean-it"
+        ).allow_failure().run()
+
+
+def test_delete_gcp_credential_with_confirmation_confirmed(run_jenkee_authed, gcp_key_files):
+    """
+    測試互動式確認後刪除 GCP credential（模擬輸入 y）
+
+    對應文件中的「測試 1: 互動式確認」
+    """
+    # Arrange: 先建立一個 credential
+    credential_id = "test-delete-gcp-cred-confirm"
+    result = run_jenkee_authed.run(
+        "gcp", "credential", "create",
+        credential_id,
+        str(gcp_key_files['sa1'])
+    )
+    assert result.returncode == 0
+
+    # Act: 刪除並確認（模擬輸入 'y'）
+    result = run_jenkee_authed.build_command(
+        "gcp", "credential", "delete",
+        credential_id
+    ).with_stdin("y\n").run()
 
     # Assert: 驗證刪除成功
     assert result.returncode == 0, f"Failed to delete GCP credential: {result.stderr}"
@@ -512,7 +585,7 @@ def test_delete_nonexistent_credential_fails(run_jenkee_authed):
     result = run_jenkee_authed.build_command(
         "gcp", "credential", "delete",
         "nonexistent-credential-id",
-        "--confirm"
+        "--yes-i-really-mean-it"
     ).must_fail().run()
 
     # Assert: 驗證失敗並顯示適當錯誤訊息

@@ -5,11 +5,11 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from jenkins_tools.core import Command, JenkinsConfig, JenkinsCLI
+from jenkins_tools.core import Command, DangerousCommandMixin, JenkinsConfig, JenkinsCLI
 from jenkins_tools.credential_describers import CREDENTIAL_DESCRIBERS
 
 
-class CredentialCommand(Command):
+class CredentialCommand(DangerousCommandMixin, Command):
     """
     GCP credential management command dispatcher
 
@@ -17,14 +17,15 @@ class CredentialCommand(Command):
     Actions: create, list, describe, update, delete
     """
 
-    def __init__(self, args):
+    def __init__(self, args=None):
         """
         Initialize with command line arguments
 
         Args:
             args: List of command arguments (after 'gcp credential')
         """
-        self.args = args
+        self.args = args or []
+        super().__init__()
 
     def execute(self) -> int:
         """Execute credential subcommand"""
@@ -63,7 +64,7 @@ class CredentialCommand(Command):
         print("  list                           List all GCP credentials")
         print("  describe <id> [--show-secret]  Show detailed credential information")
         print("  update <id> <json-key-file>    Update an existing GCP credential")
-        print("  delete <id> [--confirm]        Delete a GCP credential")
+        print("  delete <id> [--yes-i-really-mean-it]  Delete a GCP credential")
         print()
         print("Examples:")
         print(f"  {program_name} gcp credential create my-gcp-sa ~/key.json")
@@ -71,7 +72,7 @@ class CredentialCommand(Command):
         print(f"  {program_name} gcp credential describe my-gcp-sa")
         print(f"  {program_name} gcp credential describe my-gcp-sa --show-secret")
         print(f"  {program_name} gcp credential update my-gcp-sa ~/new-key.json")
-        print(f"  {program_name} gcp credential delete my-gcp-sa --confirm")
+        print(f"  {program_name} gcp credential delete my-gcp-sa --yes-i-really-mean-it")
 
     def _create(self, args) -> int:
         """Create a new GCP credential"""
@@ -364,24 +365,15 @@ class CredentialCommand(Command):
             print("Error: Credential ID is required.", file=sys.stderr)
             program_name = Path(sys.argv[0]).name if sys.argv else "jenkee"
             print(
-                f"Usage: {program_name} gcp credential delete <credential-id> [--confirm]",
+                f"Usage: {program_name} gcp credential delete <credential-id> [--yes-i-really-mean-it]",
                 file=sys.stderr,
             )
             return 1
 
         credential_id = args[0]
-        has_confirm = "--confirm" in args
-
-        # Interactive confirmation if --confirm not provided
-        if not has_confirm:
-            try:
-                response = input(f"Are you sure you want to delete credential '{credential_id}'? (y/N): ")
-                if response.lower() not in ('y', 'yes'):
-                    print("Deletion cancelled.")
-                    return 0
-            except (EOFError, KeyboardInterrupt):
-                print("\nDeletion cancelled.")
-                return 0
+        operation_desc = f"delete gcp credential '{credential_id}'"
+        if not self.require_confirmation(operation_desc):
+            return 0
 
         # Create Groovy script to delete the credential
         groovy_script = self._generate_delete_script(credential_id)
