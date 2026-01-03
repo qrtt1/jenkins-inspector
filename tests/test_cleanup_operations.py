@@ -664,7 +664,9 @@ def test_soft_delete_strategy(run_jenkee_authed):
     assert create_result.returncode == 0, "Step 1: Should create job"
 
     # 2. 停用 job（軟刪除第一步）
-    disable_result = run_jenkee_authed.run("disable-job", job_name)
+    disable_result = run_jenkee_authed.run(
+        "disable-job", job_name, "--yes-i-really-mean-it"
+    )
     assert disable_result.returncode == 0, "Step 2: Should disable job"
 
     # 3. 驗證 job 已停用但仍存在

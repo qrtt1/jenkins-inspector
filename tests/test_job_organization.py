@@ -380,11 +380,15 @@ def test_disable_job(run_jenkee_authed):
     注意：測試後會恢復 job 狀態
     """
     # Arrange: 確保 test-job-3 初始是啟用的
-    enable_result = run_jenkee_authed.run("enable-job", "test-job-3")
+    enable_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert enable_result.returncode == 0, "Should enable job first"
 
     # Act: 執行 disable-job 指令
-    result = run_jenkee_authed.run("disable-job", "test-job-3")
+    result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"disable-job should succeed, got: {result.stderr}"
@@ -392,7 +396,71 @@ def test_disable_job(run_jenkee_authed):
         "Should show success message"
 
     # Cleanup: 恢復 job 狀態（啟用）
-    cleanup_result = run_jenkee_authed.run("enable-job", "test-job-3")
+    cleanup_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
+    assert cleanup_result.returncode == 0, "Should restore job state"
+
+
+def test_disable_job_with_confirmation_cancelled(run_jenkee_authed):
+    """
+    測試取消停用 Job（模擬輸入 n）
+
+    對應文件中的「測試 2: 取消停用」
+    """
+    # Arrange: 確保 test-job-3 初始是啟用的
+    enable_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
+    assert enable_result.returncode == 0, "Should enable job first"
+
+    # Act: 嘗試停用但取消（模擬輸入 'n'）
+    result = run_jenkee_authed.build_command(
+        "disable-job", "test-job-3"
+    ).with_stdin("n\n").run()
+
+    # Assert: 驗證返回 0（取消不是錯誤）
+    assert result.returncode == 0, f"Should return 0 when cancelled, got: {result.returncode}"
+    assert "cancelled" in result.stdout.lower() or "canceled" in result.stdout.lower(), \
+        "Should show cancellation message"
+
+    # Verify: job 仍然是啟用狀態
+    status_result = run_jenkee_authed.run("job-status", "test-job-3")
+    status = parse_job_status(status_result.stdout)
+    assert status.status == "ENABLED", "Job should remain enabled after cancellation"
+
+
+def test_disable_job_with_confirmation_confirmed(run_jenkee_authed):
+    """
+    測試互動式確認後停用 Job（模擬輸入 y）
+
+    對應文件中的「測試 1: 互動式確認」
+    """
+    # Arrange: 確保 test-job-3 初始是啟用的
+    enable_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
+    assert enable_result.returncode == 0, "Should enable job first"
+
+    # Act: 停用並確認（模擬輸入 'y'）
+    result = run_jenkee_authed.build_command(
+        "disable-job", "test-job-3"
+    ).with_stdin("y\n").run()
+
+    # Assert: 驗證執行成功
+    assert result.returncode == 0, f"disable-job should succeed, got: {result.stderr}"
+    assert "✓" in result.stdout or "success" in result.stdout.lower(), \
+        "Should show success message"
+
+    # Verify: job 已停用
+    status_result = run_jenkee_authed.run("job-status", "test-job-3")
+    status = parse_job_status(status_result.stdout)
+    assert status.status == "DISABLED", "Job should be disabled after confirmation"
+
+    # Cleanup: 恢復 job 狀態（啟用）
+    cleanup_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert cleanup_result.returncode == 0, "Should restore job state"
 
 
@@ -403,7 +471,9 @@ def test_verify_job_disabled(run_jenkee_authed):
     對應 test plan 步驟 7
     """
     # Arrange: 先停用 job
-    disable_result = run_jenkee_authed.run("disable-job", "test-job-3")
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert disable_result.returncode == 0, "Should disable job successfully"
 
     # Act: 執行 job-status 指令查看狀態
@@ -418,7 +488,9 @@ def test_verify_job_disabled(run_jenkee_authed):
         f"Job should be DISABLED, got {status.status}"
 
     # Cleanup: 恢復 job 狀態
-    cleanup_result = run_jenkee_authed.run("enable-job", "test-job-3")
+    cleanup_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert cleanup_result.returncode == 0, "Should restore job state"
 
 
@@ -429,7 +501,9 @@ def test_build_disabled_job(run_jenkee_authed):
     對應 test plan 步驟 8
     """
     # Arrange: 先停用 job
-    disable_result = run_jenkee_authed.run("disable-job", "test-job-3")
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert disable_result.returncode == 0, "Should disable job successfully"
 
     # Act: 嘗試觸發 build 並允許失敗
@@ -444,7 +518,9 @@ def test_build_disabled_job(run_jenkee_authed):
         "Should fail or warn about disabled job"
 
     # Cleanup: 恢復 job 狀態
-    cleanup_result = run_jenkee_authed.run("enable-job", "test-job-3")
+    cleanup_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert cleanup_result.returncode == 0, "Should restore job state"
 
 
@@ -455,16 +531,76 @@ def test_enable_job(run_jenkee_authed):
     對應 test plan 步驟 9
     """
     # Arrange: 先停用 job
-    disable_result = run_jenkee_authed.run("disable-job", "test-job-3")
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert disable_result.returncode == 0, "Should disable job first"
 
     # Act: 執行 enable-job 指令
-    result = run_jenkee_authed.run("enable-job", "test-job-3")
+    result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"enable-job should succeed, got: {result.stderr}"
     assert "✓" in result.stdout or "success" in result.stdout.lower(), \
         "Should show success message"
+
+
+def test_enable_job_with_confirmation_cancelled(run_jenkee_authed):
+    """
+    測試取消啟用 Job（模擬輸入 n）
+
+    對應文件中的「測試 2: 取消啟用」
+    """
+    # Arrange: 確保 test-job-3 初始是停用的
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
+    assert disable_result.returncode == 0, "Should disable job first"
+
+    # Act: 嘗試啟用但取消（模擬輸入 'n'）
+    result = run_jenkee_authed.build_command(
+        "enable-job", "test-job-3"
+    ).with_stdin("n\n").run()
+
+    # Assert: 驗證返回 0（取消不是錯誤）
+    assert result.returncode == 0, f"Should return 0 when cancelled, got: {result.returncode}"
+    assert "cancelled" in result.stdout.lower() or "canceled" in result.stdout.lower(), \
+        "Should show cancellation message"
+
+    # Verify: job 仍然是停用狀態
+    status_result = run_jenkee_authed.run("job-status", "test-job-3")
+    status = parse_job_status(status_result.stdout)
+    assert status.status == "DISABLED", "Job should remain disabled after cancellation"
+
+
+def test_enable_job_with_confirmation_confirmed(run_jenkee_authed):
+    """
+    測試互動式確認後啟用 Job（模擬輸入 y）
+
+    對應文件中的「測試 1: 互動式確認」
+    """
+    # Arrange: 確保 test-job-3 初始是停用的
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
+    assert disable_result.returncode == 0, "Should disable job first"
+
+    # Act: 啟用並確認（模擬輸入 'y'）
+    result = run_jenkee_authed.build_command(
+        "enable-job", "test-job-3"
+    ).with_stdin("y\n").run()
+
+    # Assert: 驗證執行成功
+    assert result.returncode == 0, f"enable-job should succeed, got: {result.stderr}"
+    assert "✓" in result.stdout or "success" in result.stdout.lower(), \
+        "Should show success message"
+
+    # Verify: job 已啟用
+    status_result = run_jenkee_authed.run("job-status", "test-job-3")
+    status = parse_job_status(status_result.stdout)
+    assert status.status == "ENABLED", "Job should be enabled after confirmation"
 
 
 def test_verify_job_enabled(run_jenkee_authed):
@@ -474,10 +610,14 @@ def test_verify_job_enabled(run_jenkee_authed):
     對應 test plan 步驟 10
     """
     # Arrange: 先停用再啟用 job
-    disable_result = run_jenkee_authed.run("disable-job", "test-job-3")
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert disable_result.returncode == 0, "Should disable job first"
 
-    enable_result = run_jenkee_authed.run("enable-job", "test-job-3")
+    enable_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert enable_result.returncode == 0, "Should enable job successfully"
 
     # Act: 執行 job-status 指令查看狀態
@@ -503,11 +643,15 @@ def test_disable_multiple_jobs(run_jenkee_authed):
     對應 test plan 步驟 11
     """
     # Arrange: 確保 jobs 初始是啟用的
-    enable_result = run_jenkee_authed.run("enable-job", "test-job-1", "test-job-2")
+    enable_result = run_jenkee_authed.run(
+        "enable-job", "test-job-1", "test-job-2", "--yes-i-really-mean-it"
+    )
     assert enable_result.returncode == 0, "Should enable jobs first"
 
     # Act: 執行 disable-job 指令（批次）
-    result = run_jenkee_authed.run("disable-job", "test-job-1", "test-job-2")
+    result = run_jenkee_authed.run(
+        "disable-job", "test-job-1", "test-job-2", "--yes-i-really-mean-it"
+    )
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"disable-job should succeed, got: {result.stderr}"
@@ -524,7 +668,9 @@ def test_disable_multiple_jobs(run_jenkee_authed):
     assert status2.status == "DISABLED", "test-job-2 should be disabled"
 
     # Cleanup: 恢復 jobs 狀態
-    cleanup_result = run_jenkee_authed.run("enable-job", "test-job-1", "test-job-2")
+    cleanup_result = run_jenkee_authed.run(
+        "enable-job", "test-job-1", "test-job-2", "--yes-i-really-mean-it"
+    )
     assert cleanup_result.returncode == 0, "Should restore jobs state"
 
 
@@ -535,11 +681,15 @@ def test_enable_multiple_jobs(run_jenkee_authed):
     對應 test plan 步驟 12
     """
     # Arrange: 先停用 jobs
-    disable_result = run_jenkee_authed.run("disable-job", "test-job-1", "test-job-2")
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-1", "test-job-2", "--yes-i-really-mean-it"
+    )
     assert disable_result.returncode == 0, "Should disable jobs first"
 
     # Act: 執行 enable-job 指令（批次）
-    result = run_jenkee_authed.run("enable-job", "test-job-1", "test-job-2")
+    result = run_jenkee_authed.run(
+        "enable-job", "test-job-1", "test-job-2", "--yes-i-really-mean-it"
+    )
 
     # Assert: 驗證執行成功
     assert result.returncode == 0, f"enable-job should succeed, got: {result.stderr}"
@@ -566,7 +716,7 @@ def test_disable_nonexistent_job(run_jenkee_authed):
 
     # Act: 執行 disable-job 指令並允許失敗
     result = run_jenkee_authed.build_command(
-        "disable-job", "non-existent-job"
+        "disable-job", "non-existent-job", "--yes-i-really-mean-it"
     ).allow_failure().run()
 
     # Assert: 驗證失敗
@@ -628,11 +778,15 @@ def test_enable_disable_workflow(run_jenkee_authed):
 
     # 如果初始是 disabled，先啟用
     if initial_status.status == "DISABLED":
-        enable_result = run_jenkee_authed.run("enable-job", "test-job-3")
+        enable_result = run_jenkee_authed.run(
+            "enable-job", "test-job-3", "--yes-i-really-mean-it"
+        )
         assert enable_result.returncode == 0, "Should enable job first"
 
     # 2. 停用 job
-    disable_result = run_jenkee_authed.run("disable-job", "test-job-3")
+    disable_result = run_jenkee_authed.run(
+        "disable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert disable_result.returncode == 0, "Step 2: disable-job should succeed"
 
     # 3. 驗證已停用
@@ -642,7 +796,9 @@ def test_enable_disable_workflow(run_jenkee_authed):
         "Step 3: Job should be disabled"
 
     # 4. 重新啟用
-    enable_result = run_jenkee_authed.run("enable-job", "test-job-3")
+    enable_result = run_jenkee_authed.run(
+        "enable-job", "test-job-3", "--yes-i-really-mean-it"
+    )
     assert enable_result.returncode == 0, "Step 4: enable-job should succeed"
 
     # 5. 驗證已啟用
