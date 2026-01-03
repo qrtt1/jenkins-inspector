@@ -23,6 +23,7 @@ from jenkins_tools.commands.delete_builds import DeleteBuildsCommand
 from jenkins_tools.commands.groovy import GroovyCommand
 from jenkins_tools.commands.help import HelpCommand
 from jenkins_tools.commands.prompt import PromptCommand
+from jenkins_tools.commands.dev_qa import DevQACommand
 
 __all__ = [
     "AuthCommand",
@@ -48,4 +49,5 @@ __all__ = [
     "GroovyCommand",
     "HelpCommand",
     "PromptCommand",
+    "DevQACommand",
 ]

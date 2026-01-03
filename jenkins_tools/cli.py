@@ -27,6 +27,7 @@ from jenkins_tools.commands import (
     GroovyCommand,
     HelpCommand,
     PromptCommand,
+    DevQACommand,
 )
 from jenkins_tools.commands.gcp import GCPCommand
 
@@ -118,6 +119,9 @@ def main():
         sys.exit(cmd.execute())
     elif command == "help":
         cmd = HelpCommand(sys.argv[2:])
+        sys.exit(cmd.execute())
+    elif command == "dev-qa":
+        cmd = DevQACommand(sys.argv[2:])
         sys.exit(cmd.execute())
     else:
         print(f"Error: Unknown command '{command}'", file=sys.stderr)
