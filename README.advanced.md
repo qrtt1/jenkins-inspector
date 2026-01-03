@@ -8,11 +8,15 @@
 
 | 命令 | 說明 | 範例 |
 |------|------|------|
-| `delete-job` ⚠️ | 刪除 job（不可逆） | `jenkee delete-job <job> [job ...]` |
-| `disable-job` ⚠️ | 停用 job | `jenkee disable-job <job> [job ...]` |
-| `enable-job` ⚠️ | 啟用 job | `jenkee enable-job <job> [job ...]` |
-| `delete-builds` ⚠️ | 刪除 build 記錄（不可逆） | `jenkee delete-builds <job> <range>` |
-| `groovy` ⚠️ | 執行 Groovy script（最高風險） | `jenkee groovy <script>` |
+| `delete-job` ⚠️ | 刪除 job（不可逆） | `jenkee delete-job <job> [job ...] [--yes-i-really-mean-it]` |
+| `disable-job` ⚠️ | 停用 job | `jenkee disable-job <job> [job ...] [--yes-i-really-mean-it]` |
+| `enable-job` ⚠️ | 啟用 job | `jenkee enable-job <job> [job ...] [--yes-i-really-mean-it]` |
+| `delete-builds` ⚠️ | 刪除 build 記錄（不可逆） | `jenkee delete-builds <job> <range> [--yes-i-really-mean-it]` |
+| `groovy` ⚠️ | 執行 Groovy script（最高風險） | `jenkee groovy <script> [--yes-i-really-mean-it]` |
+
+## 確認機制與跳過方式
+
+上述命令預設會詢問互動式確認。若要用在自動化腳本，可加上 `--yes-i-really-mean-it` 跳過確認。
 
 ## 如何查看這些命令
 
