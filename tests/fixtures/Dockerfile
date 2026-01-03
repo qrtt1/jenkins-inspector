@@ -1,4 +1,5 @@
-FROM jenkins/jenkins:lts-jdk17
+ARG JENKINS_IMAGE=jenkins/jenkins:lts-jdk17
+FROM ${JENKINS_IMAGE}
 
 # 安裝必要的 plugins（不指定版本，讓 plugin-cli 自動選擇相容版本）
 RUN jenkins-plugin-cli --plugins \
