@@ -2,11 +2,11 @@
 Test GCP credentials in a freestyle job
 
 This test validates that GCP credentials created with `jenkee gcp credential create`
-can be used in Jenkins freestyle jobs with credentials-binding plugin.
+can be used in Jenkins freestyle jobs with gcloud-sdk GCloudBuildWrapper.
 
 Test flow:
 1. Create GCP credential using jenkee gcp credential create
-2. Create freestyle job with credentials-binding
+2. Create freestyle job with GCloudBuildWrapper
 3. Build the job and verify GCP authentication works
 """
 
@@ -20,8 +20,8 @@ def test_gcp_freestyle_job(run_jenkee_authed, jenkins_instance, gcp_key_files, g
 
     Validates:
     - Credential created via jenkee gcp credential create
-    - Credential can be bound to GOOGLE_APPLICATION_CREDENTIALS
-    - Service account can be activated with gcloud auth activate-service-account
+    - Credential can be used by GCloudBuildWrapper
+    - Service account is activated by gcloud-sdk plugin
     - gcloud commands work with the activated service account
     """
     credential_id = "test-freestyle-gcp-cred"
@@ -42,7 +42,7 @@ def test_gcp_freestyle_job(run_jenkee_authed, jenkins_instance, gcp_key_files, g
         print(f"  Service Account: {gcp_sa1_info['client_email']}")
         print(f"  Project ID: {gcp_sa1_info['project_id']}")
 
-        # Job XML configuration - use credentials-binding
+        # Job XML configuration - use GCloudBuildWrapper
         job_xml = f'''<?xml version='1.1' encoding='UTF-8'?>
 <project>
   <description>Test GCP Service Account credentials in freestyle job</description>
@@ -65,29 +65,8 @@ echo "Testing GCP Service Account Credentials"
 echo "=========================================="
 echo ""
 
-echo "Step 1: Verify GOOGLE_APPLICATION_CREDENTIALS is set"
-if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
-    echo "ERROR: GOOGLE_APPLICATION_CREDENTIALS not set"
-    exit 1
-fi
-echo "GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS"
-echo ""
-
-echo "Step 2: Extract service account email from credential file"
-SERVICE_ACCOUNT=$(grep -o '"client_email"[[:space:]]*:[[:space:]]*"[^"]*"' "$GOOGLE_APPLICATION_CREDENTIALS" | cut -d'"' -f4)
-echo "Service Account: $SERVICE_ACCOUNT"
-echo ""
-
-echo "Step 3: Activate service account"
-gcloud auth activate-service-account "$SERVICE_ACCOUNT" --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
-echo ""
-
-echo "Step 4: Verify authentication"
-gcloud auth list
-echo ""
-
-echo "Step 5: Test GCP API access (list projects)"
-gcloud projects list --limit=1
+echo "Step 1: Test GCP API access (list service accounts)"
+gcloud iam service-accounts list --project {gcp_sa1_info['project_id']} | grep -F "{gcp_sa1_info['client_email']}"
 echo ""
 
 echo "=========================================="
@@ -99,14 +78,10 @@ echo "=========================================="
   </builders>
   <publishers/>
   <buildWrappers>
-    <org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper plugin="credentials-binding">
-      <bindings>
-        <org.jenkinsci.plugins.credentialsbinding.impl.FileBinding>
-          <credentialsId>{credential_id}</credentialsId>
-          <variable>GOOGLE_APPLICATION_CREDENTIALS</variable>
-        </org.jenkinsci.plugins.credentialsbinding.impl.FileBinding>
-      </bindings>
-    </org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper>
+    <com.byclosure.jenkins.plugins.gcloud.GCloudBuildWrapper plugin="gcloud-sdk@0.0.3">
+      <installation></installation>
+      <credentialsId>{credential_id}</credentialsId>
+    </com.byclosure.jenkins.plugins.gcloud.GCloudBuildWrapper>
   </buildWrappers>
 </project>
 '''
@@ -182,34 +157,29 @@ echo "=========================================="
             "Should show test header"
         print("✓ Test header found")
 
-        # 2. Check GOOGLE_APPLICATION_CREDENTIALS was set
-        assert "GOOGLE_APPLICATION_CREDENTIALS:" in console_output, \
-            "Should show GOOGLE_APPLICATION_CREDENTIALS environment variable"
-        print("✓ GOOGLE_APPLICATION_CREDENTIALS set")
-
-        # 3. Check service account email
+        # 2. Check service account email
         assert gcp_sa1_info['client_email'] in console_output, \
             f"Should show service account email: {gcp_sa1_info['client_email']}"
         print(f"✓ Service account email found: {gcp_sa1_info['client_email']}")
 
-        # 4. Check gcloud auth activation
+        # 3. Check gcloud auth activation
         has_activate = "activate-service-account" in console_output.lower() or \
                        "Activated service account" in console_output
         assert has_activate, \
             "Should show gcloud auth activate-service-account execution"
         print("✓ Service account activation found")
 
-        # 5. Check gcloud projects list (API access)
-        assert "gcloud projects list" in console_output, \
-            "Should execute gcloud projects list command"
+        # 4. Check gcloud service-accounts list (API access)
+        assert "gcloud iam service-accounts list" in console_output, \
+            "Should execute gcloud iam service-accounts list command"
         print("✓ GCP API access tested")
 
-        # 6. Check test completion message
+        # 5. Check test completion message
         assert "✓ GCP credential check completed!" in console_output, \
             "Should show test completion message"
         print("✓ Test completion message found")
 
-        # 7. Check build success
+        # 6. Check build success
         assert "Finished: SUCCESS" in console_output, \
             "Job should complete successfully"
         print("✓ Build finished successfully")
@@ -220,7 +190,6 @@ echo "=========================================="
         print("="*80)
         print("Validated:")
         print(f"  ✓ Created credential using: jenkee gcp credential create")
-        print(f"  ✓ Credential bound to GOOGLE_APPLICATION_CREDENTIALS")
         print(f"  ✓ Service account activated: {gcp_sa1_info['client_email']}")
         print(f"  ✓ gcloud commands executed successfully")
         print(f"  ✓ Credential cleanup completed")

@@ -8,7 +8,7 @@
 
 驗證使用者可以：
 1. 建立、更新、列出、刪除 GCP Service Account credentials
-2. 在 freestyle job 中使用 GCP credentials（使用 credentials-binding plugin）
+2. 在 freestyle job 中使用 GCP credentials（使用 gcloud-sdk plugin 的 GCloudBuildWrapper）
 3. 所有操作都有適當的錯誤處理和安全性保護
 
 **注意**: Pipeline job 整合測試已移除，因為在測試環境中 Pipeline script 無法正常執行（可能與 script sandbox 或 plugin 設定有關）。
@@ -39,7 +39,7 @@
 - Jenkins 中已安裝：
   - `google-oauth-plugin` - 提供 GCP credential 類型
   - `gcloud-sdk` plugin - 提供自動 activation 功能
-  - `credentials-binding` plugin - 提供 credential binding 功能
+- `gcloud-sdk` plugin - 提供 GCloudBuildWrapper
 - 有效的 GCP Service Account JSON key file 用於測試
 - 足夠權限建立和管理 credentials
 
@@ -62,7 +62,7 @@ jenkee gcp credential create my-gcp-sa ~/service-account-key.json
 - [ ] 成功建立 credential
 - [ ] Credential ID 正確
 - [ ] 顯示正確的 project ID
-- [ ] Credential type 為 FileCredentialsImpl (Secret file)
+- [ ] Credential type 為 GoogleRobotPrivateKeyCredentials
 - [ ] 可以在 Jenkins UI 中看到新建立的 credential
 
 **錯誤情境測試**：
@@ -96,14 +96,13 @@ jenkee gcp credential list
 **預期結果**：
 - Exit code: 0
 - 列出所有 GCP credentials 的 metadata
-- 顯示 ID、Description、Project ID（從 JSON key 中提取）
+- 顯示 ID、Description、Project ID
 - 不洩漏 private key 或完整的 JSON content
 
 **驗證點**：
 - [ ] 成功列出所有 GCP credentials
 - [ ] 輸出包含 credential ID
 - [ ] 輸出包含 project ID
-- [ ] 輸出包含 service account email
 - [ ] 不包含 private key
 - [ ] 格式清晰易讀
 
@@ -232,7 +231,7 @@ jenkee gcp credential delete my-gcp-sa --yes-i-really-mean-it
 jenkee gcp credential create test-gcp-freestyle ~/viewer-sa-key.json
 ```
 
-2. 建立 freestyle job，使用 credentials-binding
+2. 建立 freestyle job，使用 GCloudBuildWrapper
 3. 執行 job
 4. 驗證 console output
 
@@ -240,14 +239,10 @@ jenkee gcp credential create test-gcp-freestyle ~/viewer-sa-key.json
 
 ```xml
 <buildWrappers>
-  <org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper>
-    <bindings>
-      <org.jenkinsci.plugins.credentialsbinding.impl.FileBinding>
-        <credentialsId>test-gcp-freestyle</credentialsId>
-        <variable>GOOGLE_APPLICATION_CREDENTIALS</variable>
-      </org.jenkinsci.plugins.credentialsbinding.impl.FileBinding>
-    </bindings>
-  </org.jenkinsci.plugins.credentialsbinding.impl.SecretBuildWrapper>
+  <com.byclosure.jenkins.plugins.gcloud.GCloudBuildWrapper plugin="gcloud-sdk@0.0.3">
+    <installation></installation>
+    <credentialsId>test-gcp-freestyle</credentialsId>
+  </com.byclosure.jenkins.plugins.gcloud.GCloudBuildWrapper>
 </buildWrappers>
 ```
 
@@ -258,18 +253,8 @@ jenkee gcp credential create test-gcp-freestyle ~/viewer-sa-key.json
 echo "Testing GCP Service Account Credentials"
 echo "=========================================="
 
-# 提取 service account email
-SERVICE_ACCOUNT=$(grep -o '"client_email"[[:space:]]*:[[:space:]]*"[^"]*"' "$GOOGLE_APPLICATION_CREDENTIALS" | cut -d'"' -f4)
-echo "Service Account: $SERVICE_ACCOUNT"
-
-# Activate service account（由 gcloud-sdk plugin 自動執行）
-gcloud auth activate-service-account "$SERVICE_ACCOUNT" --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
-
-# 驗證認證
-gcloud auth list
-
 # 測試實際操作（如果 SA 有權限）
-gcloud projects list --limit=1
+gcloud iam service-accounts list --project twjug-lite
 
 echo "=========================================="
 echo "✓ GCP credential check completed!"
@@ -278,19 +263,15 @@ echo "✓ GCP credential check completed!"
 **驗證點**：
 - [ ] Job 成功執行
 - [ ] Console output 顯示 "Activated service account credentials for: [...]"
-- [ ] `gcloud auth list` 顯示正確的 service account
-- [ ] Service account email 正確
-- [ ] GOOGLE_APPLICATION_CREDENTIALS 環境變數正確設定
-- [ ] 可以執行 gcloud 命令（如 gcloud projects list）
+- [ ] `gcloud iam service-accounts list --project twjug-lite | grep "<service-account-email>"` 有值
 
 **Console Output 預期關鍵訊息**：
 
 ```
 Activated service account credentials for: [viewer-sa@your-project.iam.gserviceaccount.com]
 
-             Credentialed Accounts
-ACTIVE  ACCOUNT
-*       viewer-sa@your-project.iam.gserviceaccount.com
+DISPLAY NAME                            EMAIL                                                         DISABLED
+Jenkee Tester Viewer SA 2               jenkee-tester-viewer-sa-2@twjug-lite.iam.gserviceaccount.com  False
 ```
 
 ### Phase 3: Pipeline Job 整合測試
@@ -415,7 +396,7 @@ jenkee gcp credential list | grep old-gcp-sa || echo "已刪除"
 # 1. 列出所有 GCP credentials
 jenkee gcp credential list > gcp-creds.txt
 
-# 2. 對每個 credential 查看詳細資訊
+    # 2. 對每個 credential 查看詳細資訊
 while read -r cred_id; do
   echo "=== $cred_id ==="
   jenkee gcp credential describe "$cred_id"
@@ -473,9 +454,8 @@ jenkee gcp credential describe my-gcp-sa | grep -i "BEGIN PRIVATE KEY" && echo "
 ```
 
 **驗證點**：
-- [ ] credentials-binding plugin 正確 mask 敏感資訊
+- [ ] gcloud-sdk plugin 不在 console output 洩漏 JSON key
 - [ ] Console output 不顯示完整的 JSON key
-- [ ] GOOGLE_APPLICATION_CREDENTIALS 路徑可見（這是正常的）
 - [ ] 實際 credential 內容被 mask
 
 ## 測試完成標準
@@ -492,7 +472,7 @@ jenkee gcp credential describe my-gcp-sa | grep -i "BEGIN PRIVATE KEY" && echo "
 
 ### 安全性
 - [ ] 不洩漏 private key（除非明確使用 --show-secret）
-- [ ] credentials-binding plugin 正確 mask 敏感資訊
+- [ ] gcloud-sdk plugin 不在 console output 洩漏 JSON key
 - [ ] 所有安全性驗證點都通過
 
 ### 測試自動化
@@ -520,20 +500,17 @@ jenkee gcp <resource> <action> [arguments]
 
 ### Credential Type 選擇
 
-使用 **FileCredentialsImpl (Secret file)** 而非 GoogleRobotPrivateKeyCredentials：
+使用 **GoogleRobotPrivateKeyCredentials** 作為 GCP credential 類型：
 
 **理由**：
-- credentials-binding plugin 的 FileBinding 只支援 Secret file 類型
-- FileCredentialsImpl 是標準的 Jenkins secret file，相容性更好
-- 可以直接用 `GOOGLE_APPLICATION_CREDENTIALS` 環境變數
+- 與 gcloud-sdk plugin 的 GCloudBuildWrapper 相容
+- Jenkins UI 與 credential 選單一致
 
 ### Plugin 依賴
 
 必要的 Jenkins plugins：
-- `google-oauth-plugin` - 提供 GCP credential 類型（可選，如果使用 FileCredentialsImpl 則不需要）
+- `google-oauth-plugin` - 提供 GoogleRobotPrivateKeyCredentials
 - `gcloud-sdk` - 提供 gcloud SDK 安裝和管理
-- `credentials-binding` - 提供 credential binding 功能
-- `plain-credentials` - 提供 FileCredentialsImpl
 
 ### 測試環境設定
 

@@ -37,6 +37,7 @@ class GCPCredential:
     type: str
     file_name: Optional[str] = None
     description: Optional[str] = None
+    project_id: Optional[str] = None
 
 
 # ============================================================================
@@ -51,12 +52,11 @@ def parse_gcp_credential_list(stdout: str) -> List[GCPCredential]:
         GCP Service Account Credentials:
 
         ID: my-gcp-sa
-          Type: Secret file (FileCredentialsImpl)
-          File Name: gcp-key.json
-          Description: GCP Service Account for project: my-project
+          Type: GoogleRobotPrivateKeyCredentials
+          Project ID: my-gcp-sa
 
         ID: another-gcp-sa
-          Type: Secret file (FileCredentialsImpl)
+          Type: GoogleRobotPrivateKeyCredentials
           ...
 
     Returns:
@@ -83,6 +83,8 @@ def parse_gcp_credential_list(stdout: str) -> List[GCPCredential]:
             current_cred.file_name = line.split(':', 1)[1].strip()
         elif line.startswith('Description:') and current_cred:
             current_cred.description = line.split(':', 1)[1].strip()
+        elif line.startswith('Project ID:') and current_cred:
+            current_cred.project_id = line.split(':', 1)[1].strip()
 
     # Don't forget the last credential
     if current_cred:
@@ -98,10 +100,10 @@ def parse_gcp_credential_describe(stdout: str) -> dict:
     預期格式：
         SUCCESS
         Credential: my-gcp-sa
-        Type: FileCredentialsImpl
+        Type: GoogleRobotPrivateKeyCredentials
         Scope: GLOBAL
-        File Name: gcp-key.json
-        Description: GCP Service Account for project: my-project
+        Project ID: my-gcp-sa
+        Service Account: my-sa@project.iam.gserviceaccount.com
 
         Secret: [PROTECTED]
 
@@ -116,6 +118,8 @@ def parse_gcp_credential_describe(stdout: str) -> dict:
         'scope': None,
         'file_name': None,
         'description': None,
+        'project_id': None,
+        'service_account': None,
         'secret_shown': False,
         'has_warning': False
     }
@@ -132,6 +136,10 @@ def parse_gcp_credential_describe(stdout: str) -> dict:
             result['file_name'] = line.split(':', 1)[1].strip()
         elif line.startswith('Description:'):
             result['description'] = line.split(':', 1)[1].strip()
+        elif line.startswith('Project ID:'):
+            result['project_id'] = line.split(':', 1)[1].strip()
+        elif line.startswith('Service Account:'):
+            result['service_account'] = line.split(':', 1)[1].strip()
         elif '[PROTECTED]' in line or 'PROTECTED' in line:
             result['secret_shown'] = False
         elif 'WARNING' in line or 'warning' in line.lower():
@@ -322,9 +330,9 @@ def test_list_gcp_credentials(run_jenkee_authed, gcp_key_files):
         cred_ids = [c.id for c in credentials]
         assert credential_id in cred_ids
 
-        # 驗證類型包含 FileCredentialsImpl 或 Secret file
+        # 驗證類型為 GoogleRobotPrivateKeyCredentials
         for cred in credentials:
-            assert "FileCredentialsImpl" in cred.type or "Secret file" in cred.type
+            assert "GoogleRobotPrivateKeyCredentials" in cred.type
     finally:
         # Cleanup
         run_jenkee_authed.build_command(
