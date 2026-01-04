@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import re
 import time
@@ -474,9 +475,7 @@ def gcp_sa1_info(gcp_key_files) -> dict:
     Returns:
         dict: SA-1 的 JSON key 內容
     """
-    import json
-    with open(gcp_key_files['sa1'], 'r') as f:
-        return json.load(f)
+    return _load_and_validate_gcp_key(gcp_key_files['sa1'], "sa1")
 
 
 @pytest.fixture(scope="session")
@@ -487,6 +486,31 @@ def gcp_sa2_info(gcp_key_files) -> dict:
     Returns:
         dict: SA-2 的 JSON key 內容
     """
-    import json
-    with open(gcp_key_files['sa2'], 'r') as f:
-        return json.load(f)
+    return _load_and_validate_gcp_key(gcp_key_files['sa2'], "sa2")
+
+
+def _load_and_validate_gcp_key(path: Path, label: str) -> dict:
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        pytest.fail(f"GCP key '{label}' is not valid JSON: {exc}")
+
+    if not isinstance(data, dict):
+        pytest.fail(f"GCP key '{label}' must be a JSON object")
+
+    required_fields = [
+        "type",
+        "project_id",
+        "private_key_id",
+        "private_key",
+        "client_email",
+        "client_id",
+        "auth_uri",
+        "token_uri",
+    ]
+    missing_fields = [field for field in required_fields if field not in data]
+    if missing_fields:
+        missing = ", ".join(missing_fields)
+        pytest.fail(f"GCP key '{label}' missing required fields: {missing}")
+
+    return data
