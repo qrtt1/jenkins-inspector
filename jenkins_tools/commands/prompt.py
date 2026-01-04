@@ -235,6 +235,30 @@ jenkee describe-credentials <credential-id> --show-secret
 - 驗證 credentials 是否正確設定
 - 排查因 credential 錯誤導致的部署失敗
 
+### 情境 2.1: 建立 GCP credential 並套用到 job
+
+建立 GCP credential，套用到使用 GCloudBuildWrapper 的 job：
+
+```bash
+# 1. 建立 GCP credential（建議用清楚的 ID，會顯示在 Jenkins 選單）
+jenkee gcp credential create bugfix-sa /path/to/service-account.json
+
+# 2. 複製範本 job
+jenkee copy-job aaa-sa-test bugfix-sa-job
+
+# 3. 取出 job XML 並更新 credentialsId
+jenkee get-job bugfix-sa-job > job-config.xml
+# 將 <credentialsId>aaa-sa</credentialsId> 改成 <credentialsId>bugfix-sa</credentialsId>
+jenkee update-job bugfix-sa-job < job-config.xml
+
+# 4. 觸發 build 並檢查 console
+jenkee build bugfix-sa-job
+jenkee console bugfix-sa-job
+```
+
+期望 console 看到：
+- `Activated service account credentials for: [<service-account-email>]`
+
 ### 情境 3: 比較 Jobs 配置差異
 
 比較環境間的配置差異：
