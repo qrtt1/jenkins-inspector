@@ -25,6 +25,7 @@ from jenkins_tools.commands import (
     EnableJobCommand,
     DeleteBuildsCommand,
     GroovyCommand,
+    DomainCommand,
     HelpCommand,
     PromptCommand,
     DevQACommand,
@@ -113,6 +114,9 @@ def main():
         sys.exit(cmd.execute())
     elif command == "gcp":
         cmd = GCPCommand(sys.argv[2:])
+        sys.exit(cmd.execute())
+    elif command == "domain":
+        cmd = DomainCommand(sys.argv[2:])
         sys.exit(cmd.execute())
     elif command == "prompt":
         cmd = PromptCommand(sys.argv[2:])

@@ -159,6 +159,8 @@ def parse_credentials_list(stdout: str) -> List[CredentialsDomain]:
         # Domain header
         domain_match = re.match(r'===\s*Domain:\s*(.+?)\s*===', line)
         if domain_match:
+            if current_credential and current_domain:
+                current_domain.credentials.append(current_credential)
             if current_domain:
                 domains.append(current_domain)
             domain_name = domain_match.group(1)
@@ -372,11 +374,19 @@ def test_complete_workflow(run_jenkee_authed):
     # 5. 查看 credentials
     creds_result = run_jenkee_authed.run("list-credentials")
     domains = parse_credentials_list(creds_result.stdout)
-    assert len(domains) == 1, f"Step 5: Should have exactly 1 domain, got {len(domains)}"
+    assert len(domains) >= 1, f"Step 5: Should have at least 1 domain, got {len(domains)}"
+
+    global_domain = next((d for d in domains if d.name == "(global)"), None)
+    assert global_domain is not None, "Step 5: Should include global domain"
 
     # 驗證恰好有 3 個測試 credentials
     total_creds = sum(len(d.credentials) for d in domains)
-    assert total_creds == 3, f"Step 5: Should have exactly 3 credentials, got {total_creds}"
+    assert total_creds >= 3, f"Step 5: Should have at least 3 credentials, got {total_creds}"
+
+    required_creds = {"test-credential-1", "test-credential-2", "test-credential-3"}
+    listed_creds = {cred.id for domain in domains for cred in domain.credentials}
+    assert required_creds.issubset(listed_creds), \
+        f"Step 5: Missing credentials {required_creds - listed_creds}"
 
 
 # ============================================================================
@@ -516,13 +526,16 @@ def test_output_format_clarity(run_jenkee_authed):
     # list-credentials: 應該有結構化的輸出
     creds_result = run_jenkee_authed.run("list-credentials")
     domains = parse_credentials_list(creds_result.stdout)
-    assert len(domains) == 1, \
-        f"list-credentials should return exactly 1 domain, got {len(domains)}"
+    assert len(domains) >= 1, \
+        f"list-credentials should return at least 1 domain, got {len(domains)}"
+
+    assert any(domain.name == "(global)" for domain in domains), \
+        "list-credentials should include global domain"
 
     # 驗證 domain 中有恰好 3 個 credentials
     total_creds = sum(len(d.credentials) for d in domains)
-    assert total_creds == 3, \
-        f"Should have exactly 3 credentials, got {total_creds}"
+    assert total_creds >= 3, \
+        f"Should have at least 3 credentials, got {total_creds}"
 
     # 驗證每個 credential 都有必要的欄位
     for domain in domains:

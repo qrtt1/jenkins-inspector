@@ -143,6 +143,8 @@ Commands:
   job-diff <job1> <job2>            比較兩個 job 配置差異
   list-credentials [domain]         列出 credentials metadata
   describe-credentials <id>         查看 credential 詳細資訊
+  domain list                       列出所有 credential domains
+  domain create <name>              建立新 domain (需確認)
   copy-job <source> <dest>          複製 job 為新 job
   update-job <job>                  更新 job 配置 (從 stdin)
   groovy <script>                   執行 Groovy script
@@ -200,21 +202,21 @@ jenkee console <job-name>
 - 檢查 job 的觸發關係（upstream/downstream）
 - 除錯 CI/CD pipeline 問題
 
-### 情境 2: 比較 Jobs 與查找 Credentials
+### 情境 2: 管理 Credentials 與 Domains
 
-比較環境間的配置差異並確認 credentials：
+管理 credential domains 並查找 credentials：
 
 ```bash
 # 1. 驗證認證
 jenkee auth
 
-# 2. 找到要比較的 jobs（通常是不同環境的同一服務）
-jenkee list-jobs <view-name>
+# 2. 列出所有 credential domains
+jenkee domain list
 
-# 3. 比較兩個 job 的配置差異
-jenkee job-diff <job-staging> <job-production>
+# 3. 建立新 domain（需確認）
+jenkee domain create staging --description="Staging credentials" --yes-i-really-mean-it
 
-# 4. 從 diff 結果中找到 credentialsId，列出所有 credentials
+# 4. 列出所有 credentials
 jenkee list-credentials
 
 # 5. 列出特定 domain 的 credentials
@@ -228,12 +230,31 @@ jenkee describe-credentials <credential-id> --show-secret
 ```
 
 **使用時機：**
-- 設定新環境時，參考現有環境的配置
-- 確認 staging 和 production 環境的差異
+- 組織 credentials 到不同 domains（依環境、團隊或專案）
+- 設定新環境時，建立對應的 domain
 - 驗證 credentials 是否正確設定
 - 排查因 credential 錯誤導致的部署失敗
 
-### 情境 3: Job 管理操作
+### 情境 3: 比較 Jobs 配置差異
+
+比較環境間的配置差異：
+
+```bash
+# 1. 找到要比較的 jobs（通常是不同環境的同一服務）
+jenkee list-jobs <view-name>
+
+# 2. 比較兩個 job 的配置差異
+jenkee job-diff <job-staging> <job-production>
+
+# 3. 從 diff 結果中找到 credentialsId
+# 可以用 describe-credentials 確認 credential 詳細資訊
+```
+
+**使用時機：**
+- 確認 staging 和 production 環境的配置差異
+- 找出環境間的設定不一致
+
+### 情境 4: Job 管理操作
 
 複製與更新 job 配置：
 
