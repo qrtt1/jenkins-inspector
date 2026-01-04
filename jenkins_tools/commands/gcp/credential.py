@@ -124,8 +124,14 @@ class CredentialCommand(DangerousCommandMixin, Command):
         with open(key_file, 'r') as f:
             json_content = f.read()
 
-        # Create Groovy script to create the credential using FileCredentialsImpl
-        groovy_script = self._generate_create_script(credential_id, json_content, key_data['project_id'])
+        # Create Groovy script to create the credential using GoogleRobotPrivateKeyCredentials
+        json_filename = key_file.name
+        groovy_script = self._generate_create_script(
+            credential_id,
+            json_content,
+            json_filename,
+            key_data['project_id'],
+        )
 
         # Execute via Jenkins CLI
         cli = JenkinsCLI(config)
@@ -180,7 +186,7 @@ class CredentialCommand(DangerousCommandMixin, Command):
             print(f"Error: Failed to parse XML: {e}", file=sys.stderr)
             return 1
 
-        # Find GCP credentials (FileCredentialsImpl with GCP-related description/filename)
+        # Find GCP credentials (GoogleRobotPrivateKeyCredentials only)
         found_any = False
         for domain_creds in root.findall(
             ".//com.cloudbees.plugins.credentials.domains.DomainCredentials"
@@ -192,16 +198,13 @@ class CredentialCommand(DangerousCommandMixin, Command):
             for cred in credentials_elem:
                 cred_type = cred.tag.split(".")[-1]
 
-                # Look for FileCredentialsImpl (Secret file) - our GCP credentials
-                if cred_type == "FileCredentialsImpl":
+                if cred_type == "GoogleRobotPrivateKeyCredentials":
                     cred_id = cred.find("id")
                     if cred_id is not None:
                         cred_id_text = cred_id.text
 
-                        # Try to identify if this is a GCP credential
-                        # We'll fetch additional info via groovy script
-                        file_name = cred.find("fileName")
-                        file_name_text = file_name.text if file_name is not None else ""
+                        project_id = cred.find("projectId")
+                        project_id_text = project_id.text if project_id is not None else ""
 
                         desc = cred.find("description")
                         desc_text = desc.text if desc is not None and desc.text else ""
@@ -212,13 +215,12 @@ class CredentialCommand(DangerousCommandMixin, Command):
                             found_any = True
 
                         print(f"ID: {cred_id_text}")
-                        print(f"  Type: Secret file (FileCredentialsImpl)")
-                        if file_name_text:
-                            print(f"  File Name: {file_name_text}")
+                        print("  Type: GoogleRobotPrivateKeyCredentials")
+                        if project_id_text:
+                            print(f"  Project ID: {project_id_text}")
                         if desc_text:
                             print(f"  Description: {desc_text}")
                         print()
-
         if not found_any:
             print("No GCP credentials found.")
             print()
@@ -263,6 +265,12 @@ class CredentialCommand(DangerousCommandMixin, Command):
         output = result.stdout
         if "NOT_FOUND" in output:
             print(f"Error: Credential '{credential_id}' not found.", file=sys.stderr)
+            return 1
+        elif "UNSUPPORTED_TYPE" in output:
+            print(
+                f"Error: Credential '{credential_id}' is not a GoogleRobotPrivateKeyCredentials.",
+                file=sys.stderr,
+            )
             return 1
         elif "SUCCESS" in output:
             # Print the output (groovy script formats it)
@@ -322,7 +330,13 @@ class CredentialCommand(DangerousCommandMixin, Command):
             json_content = f.read()
 
         # Create Groovy script to update the credential
-        groovy_script = self._generate_update_script(credential_id, json_content, key_data['project_id'])
+        json_filename = key_file.name
+        groovy_script = self._generate_update_script(
+            credential_id,
+            json_content,
+            json_filename,
+            key_data['project_id'],
+        )
 
         # Execute via Jenkins CLI
         cli = JenkinsCLI(config)
@@ -401,17 +415,29 @@ class CredentialCommand(DangerousCommandMixin, Command):
             print(output, file=sys.stderr)
             return 1
 
-    def _generate_create_script(self, credential_id: str, json_content: str, project_id: str) -> str:
-        """Generate Groovy script to create GCP credential using FileCredentialsImpl"""
+    def _generate_create_script(
+        self,
+        credential_id: str,
+        json_content: str,
+        json_filename: str,
+        project_id: str,
+    ) -> str:
+        """Generate Groovy script to create GCP credential using GoogleRobotPrivateKeyCredentials"""
         # Escape single quotes in JSON content
-        escaped_json = json_content.replace("'", "\\'").replace("\n", "\\n")
+        escaped_json = (
+            json_content.replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+        )
 
         return f"""
 import com.cloudbees.plugins.credentials.CredentialsProvider
 import com.cloudbees.plugins.credentials.CredentialsScope
 import com.cloudbees.plugins.credentials.domains.Domain
-import org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl
 import com.cloudbees.plugins.credentials.SecretBytes
+import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig
 import jenkins.model.Jenkins
 
 def jenkins = Jenkins.get()
@@ -420,6 +446,9 @@ def store = jenkins.getExtensionList('com.cloudbees.plugins.credentials.SystemCr
 
 def credId = '{credential_id}'
 def jsonKey = '''{escaped_json}'''
+def jsonFileName = '{json_filename}'
+def projectIdForDescription = '{project_id}'
+def projectId = credId
 
 // Check if credential already exists
 def existing = CredentialsProvider.lookupCredentials(
@@ -435,16 +464,18 @@ if (existing != null) {{
 }}
 
 try {{
-    // Create SecretBytes from JSON content
     def jsonKeyBytes = SecretBytes.fromBytes(jsonKey.getBytes('UTF-8'))
+    def config = new JsonServiceAccountConfig()
+    config.setFilename(jsonFileName)
+    config.setSecretJsonKey(jsonKeyBytes)
 
-    // Create FileCredentialsImpl (Secret file)
-    def credential = new FileCredentialsImpl(
+    def credential = new GoogleRobotPrivateKeyCredentials(
         CredentialsScope.GLOBAL,
         credId,
-        "GCP Service Account for project: {project_id}",
-        "gcp-key.json",  // file name
-        jsonKeyBytes
+        projectId,
+        "GCP Service Account for project: " + projectIdForDescription,
+        config,
+        null
     )
 
     // Add to store
@@ -458,16 +489,28 @@ try {{
 }}
 """
 
-    def _generate_update_script(self, credential_id: str, json_content: str, project_id: str) -> str:
+    def _generate_update_script(
+        self,
+        credential_id: str,
+        json_content: str,
+        json_filename: str,
+        project_id: str,
+    ) -> str:
         """Generate Groovy script to update GCP credential"""
-        escaped_json = json_content.replace("'", "\\'").replace("\n", "\\n")
+        escaped_json = (
+            json_content.replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+        )
 
         return f"""
 import com.cloudbees.plugins.credentials.CredentialsProvider
 import com.cloudbees.plugins.credentials.CredentialsScope
 import com.cloudbees.plugins.credentials.domains.Domain
-import org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl
 import com.cloudbees.plugins.credentials.SecretBytes
+import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials
+import com.google.jenkins.plugins.credentials.oauth.JsonServiceAccountConfig
 import jenkins.model.Jenkins
 
 def jenkins = Jenkins.get()
@@ -476,6 +519,9 @@ def store = jenkins.getExtensionList('com.cloudbees.plugins.credentials.SystemCr
 
 def credId = '{credential_id}'
 def jsonKey = '''{escaped_json}'''
+def jsonFileName = '{json_filename}'
+def projectIdForDescription = '{project_id}'
+def projectId = credId
 
 // Find existing credential
 def existing = CredentialsProvider.lookupCredentials(
@@ -494,15 +540,18 @@ try {{
     // Remove old credential
     store.removeCredentials(domain, existing)
 
-    // Create new credential with same ID
     def jsonKeyBytes = SecretBytes.fromBytes(jsonKey.getBytes('UTF-8'))
+    def config = new JsonServiceAccountConfig()
+    config.setFilename(jsonFileName)
+    config.setSecretJsonKey(jsonKeyBytes)
 
-    def credential = new FileCredentialsImpl(
+    def credential = new GoogleRobotPrivateKeyCredentials(
         CredentialsScope.GLOBAL,
         credId,
-        "GCP Service Account for project: {project_id}",
-        "gcp-key.json",
-        jsonKeyBytes
+        projectId,
+        "GCP Service Account for project: " + projectIdForDescription,
+        config,
+        null
     )
 
     // Add updated credential
@@ -558,7 +607,7 @@ try {{
         """Generate Groovy script to describe GCP credential"""
         return f"""
 import com.cloudbees.plugins.credentials.CredentialsProvider
-import org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl
+import com.google.jenkins.plugins.credentials.oauth.GoogleRobotPrivateKeyCredentials
 import jenkins.model.Jenkins
 
 def jenkins = Jenkins.get()
@@ -583,9 +632,15 @@ println "Credential: ${{credId}}"
 println "Type: ${{existing.getClass().getSimpleName()}}"
 println "Scope: ${{existing.getScope()}}"
 
-if (existing instanceof FileCredentialsImpl) {{
-    println "File Name: ${{existing.getFileName()}}"
-    println "Description: ${{existing.getDescription() ?: '(no description)'}}"
+if (existing instanceof GoogleRobotPrivateKeyCredentials) {{
+    println "Project ID: ${{existing.getProjectId()}}"
+    def config = existing.getServiceAccountConfig()
+    if (config != null) {{
+        def accountId = config.getAccountId()
+        if (accountId != null) {{
+            println "Service Account: ${{accountId}}"
+        }}
+    }}
 
     if (showSecret) {{
         println ""
@@ -593,15 +648,18 @@ if (existing instanceof FileCredentialsImpl) {{
         println ""
         println "JSON Key Content:"
         println "---"
-        def content = new String(existing.getSecretBytes().getPlainData(), 'UTF-8')
-        println content
+        if (config != null && config.getSecretJsonKey() != null) {{
+            def content = new String(config.getSecretJsonKey().getPlainData(), 'UTF-8')
+            println content
+        }}
         println "---"
     }} else {{
         println ""
         println "Secret: [PROTECTED]"
         println ""
-        def progName = "jenkee"
         println "Use --show-secret flag to display the full JSON key (use with caution!)"
     }}
+}} else {{
+    println "UNSUPPORTED_TYPE"
 }}
 """

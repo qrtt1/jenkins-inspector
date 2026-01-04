@@ -9,13 +9,13 @@ jenkee 支援完整的 GCP Service Account credentials 管理，採用 git-style
 - 在 Jenkins job 中使用（透過 credentials-binding plugin）
 - 自動驗證 service account key 格式
 - 安全的 secret 管理（預設不顯示敏感資訊）
-- 使用 FileCredentialsImpl (Secret file) 以獲得最佳相容性
+- 使用 GoogleRobotPrivateKeyCredentials 儲存 GCP service account JSON key
 
 ## 前置需求
 
 Jenkins 需要安裝以下 plugins：
 - `credentials-binding` plugin - 提供 credential binding 功能
-- `google-oauth-plugin` (optional) - 如果需要使用 GCP 相關 plugin
+- `google-oauth-plugin` - 提供 GoogleRobotPrivateKeyCredentials
 
 在測試環境中，這些 plugins 會自動安裝。
 
@@ -84,14 +84,12 @@ jenkee gcp credential list
 GCP Service Account Credentials:
 
 ID: my-gcp-sa
-  Type: Secret file (FileCredentialsImpl)
-  File Name: gcp-key.json
-  Description: GCP Service Account for project: your-project-id
+  Type: GoogleRobotPrivateKeyCredentials
+  Project ID: my-gcp-sa
 
 ID: another-gcp-sa
-  Type: Secret file (FileCredentialsImpl)
-  File Name: gcp-key.json
-  Description: GCP Service Account for project: another-project
+  Type: GoogleRobotPrivateKeyCredentials
+  Project ID: another-gcp-sa
 ```
 
 ### 4. 查看 Credential 詳細資訊
@@ -107,10 +105,10 @@ jenkee gcp credential describe my-gcp-sa
 ```
 SUCCESS
 Credential: my-gcp-sa
-Type: FileCredentialsImpl
+Type: GoogleRobotPrivateKeyCredentials
 Scope: GLOBAL
-File Name: gcp-key.json
-Description: GCP Service Account for project: your-project-id
+Project ID: my-gcp-sa
+Service Account: sa@your-project.iam.gserviceaccount.com
 
 Secret: [PROTECTED]
 
@@ -261,13 +259,12 @@ Error: Credential 'nonexistent' not found.
 
 ### Credential 類型
 
-jenkee 使用 `FileCredentialsImpl` (Secret file) 來儲存 GCP service account keys，而非 `GoogleRobotPrivateKeyCredentials`。
+jenkee 使用 `GoogleRobotPrivateKeyCredentials` 來儲存 GCP service account keys。
 
 選擇這個類型的原因：
-- credentials-binding plugin 的 `FileBinding` 只支援 Secret file
-- 更標準的 Jenkins credential 類型，相容性更好
-- 可直接用 `GOOGLE_APPLICATION_CREDENTIALS` 環境變數
-- 適用於任何需要 service account key file 的工具
+- 與 Jenkins 的 GCP plugins 相容
+- 可直接提供給 GCloudBuildWrapper 與 credential binding 使用
+- JSON key 以 Jenkins SecretBytes 加密儲存
 
 ### Credential Scope
 
@@ -356,9 +353,9 @@ done
 
 A: GCP 功能被設計為 optional/specialized feature，保持主 help 簡潔，只顯示核心功能。使用者可透過 `jenkee gcp --help` 發現這些指令。
 
-### Q: 可以使用 `GoogleRobotPrivateKeyCredentials` 嗎？
+### Q: 為什麼改用 `GoogleRobotPrivateKeyCredentials`？
 
-A: 目前的實作使用 `FileCredentialsImpl` 以獲得更好的相容性。如果你需要特定的 GCP plugin 功能，請提 issue 討論。
+A: 這是 Jenkins GCP credential 的標準類型，能與 GCloudBuildWrapper 等 plugin 正常整合，並且直接使用 service account JSON key。
 
 ### Q: 如何在沒有 Jenkins CLI 的情況下使用？
 
