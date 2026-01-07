@@ -243,6 +243,150 @@ pip install -e .
 jks <command>
 ```
 
+### 版本更新與發布
+
+專案使用 Git tags 觸發自動化發布流程到 PyPI。
+
+#### 版本號規則
+
+遵循 [Semantic Versioning](https://semver.org/) 規則：
+
+- **MAJOR.MINOR.PATCH** (例如：0.3.1)
+- **MAJOR**：不相容的 API 變更
+- **MINOR**：新增功能（向後相容）
+- **PATCH**：Bug 修復（向後相容）
+
+#### 需要更新版本的檔案
+
+版本號定義在兩個地方（自動化流程會處理）：
+
+1. **`pyproject.toml`** - 第 7 行
+   ```toml
+   version = "0.3.1"
+   ```
+
+2. **`jenkins_tools/__init__.py`**
+   ```python
+   __version__ = "0.3.1"
+   ```
+
+#### 發布流程（推薦 - 全自動）
+
+專案已設定完整的自動化發布流程，只需建立並推送 git tag：
+
+```bash
+# 1. 確保在 main branch 且已同步最新變更
+git checkout main
+git pull origin main
+
+# 2. 建立版本 tag（例如發布 0.3.1）
+git tag v0.3.1
+
+# 3. 推送 tag 到 GitHub
+git push origin v0.3.1
+```
+
+**自動執行的步驟**：
+1. GitHub Actions 偵測到 tag 推送
+2. 從 tag 提取版本號（`v0.3.1` → `0.3.1`）
+3. 自動更新 `pyproject.toml` 和 `jenkins_tools/__init__.py`
+4. 執行完整測試（Python 3.10, 3.11, 3.12）
+5. 建立 distribution packages
+6. 發布到 PyPI
+
+**查看發布狀態**：
+- GitHub Actions: https://github.com/qrtt1/jenkins-inspector/actions
+- PyPI 頁面: https://pypi.org/project/jenkee/
+
+#### 手動更新版本號（本地開發測試用）
+
+如果只是本地開發測試，不需要發布，可以手動更新版本號：
+
+```bash
+# 編輯 pyproject.toml
+sed -i 's/version = ".*"/version = "0.3.1"/' pyproject.toml
+
+# 編輯 jenkins_tools/__init__.py
+sed -i 's/__version__ = ".*"/__version__ = "0.3.1"/' jenkins_tools/__init__.py
+
+# 確認更新
+grep "version = " pyproject.toml
+grep "__version__ = " jenkins_tools/__init__.py
+```
+
+#### 版本號選擇指南
+
+根據變更類型選擇適當的版本號：
+
+- **Patch 版本** (0.3.0 → 0.3.1)
+  - Bug 修復
+  - 文件更新
+  - 效能改善（無 API 變更）
+
+- **Minor 版本** (0.3.1 → 0.4.0)
+  - 新增功能
+  - 新增 command
+  - 向後相容的改進
+
+- **Major 版本** (0.4.0 → 1.0.0)
+  - 不相容的 API 變更
+  - 移除已廢棄功能
+  - 重大架構調整
+
+#### 發布前檢查清單
+
+- [ ] 所有測試通過（`pytest -v`）
+- [ ] 程式碼已格式化（`black jenkins_tools/`）
+- [ ] 文件已更新（README、CHANGELOG 等）
+- [ ] 在 main branch 上
+- [ ] 本地與 remote 已同步
+
+#### 回退版本 tag（緊急情況）
+
+如果需要刪除已推送的錯誤 tag：
+
+```bash
+# 1. 刪除本地 tag
+git tag -d v0.3.1
+
+# 2. 刪除 remote tag
+git push origin :refs/tags/v0.3.1
+```
+
+**重要警告**：
+
+1. **PyPI 版本無法刪除**
+   - 一旦版本發布到 PyPI，就無法刪除或覆寫
+   - PyPI 政策禁止刪除版本，以確保依賴關係的穩定性
+   - 唯一的解決方法是發布新的修正版本
+
+2. **如果發布了錯誤版本**
+
+   方案一：發布 Patch 版本修正
+   ```bash
+   # 假設錯誤發布了 0.3.1，立即發布 0.3.2 修正
+   git tag v0.3.2
+   git push origin v0.3.2
+   ```
+
+   方案二：使用 `yank` 標記版本（不建議用戶安裝）
+   ```bash
+   # 需要 PyPI 帳號權限，在 PyPI 網站操作
+   # 前往 https://pypi.org/manage/project/jenkee/releases/
+   # 選擇版本 → "Options" → "Yank release"
+   ```
+
+   `yank` 的效果：
+   - 版本仍存在，但標記為不建議使用
+   - 使用者無法直接安裝（除非明確指定版本號）
+   - 已安裝的用戶不受影響
+
+3. **預防措施**
+   - 發布前仔細檢查版本號
+   - 在本地充分測試
+   - 確認所有測試通過
+   - 考慮先在 Test PyPI 測試發布流程
+
 ## 注意事項
 
 ### 設定檔位置
