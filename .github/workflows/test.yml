@@ -12,8 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
-        jenkins-image: ['jenkins/jenkins:2.516.2-jdk17', 'jenkins/jenkins:lts-jdk17']
+        include:
+          - python-version: '3.11'
+            jenkins-image: 'jenkins/jenkins:lts-jdk21'
+          - python-version: '3.13'
+            jenkins-image: 'jenkins/jenkins:lts-jdk21'
       fail-fast: false
 
     steps:

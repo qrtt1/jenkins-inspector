@@ -69,7 +69,7 @@ pip list | grep -E "(pytest|testcontainers)"
 pytest -v tests/test_auth.py::test_auth_success
 
 # 使用指定 Jenkins 版本驗證環境
-JENKINS_IMAGE=jenkins/jenkins:2.516.2-jdk17 pytest -v tests/test_auth.py::test_auth_success
+JENKINS_IMAGE=jenkins/jenkins:2.516.2-jdk21 pytest -v tests/test_auth.py::test_auth_success
 ```
 
 **預期結果**：
@@ -82,10 +82,10 @@ tests/test_auth.py::test_auth_success PASSED [100%]
 
 ### 指定 Jenkins 版本
 
-測試預設使用 `jenkins/jenkins:lts-jdk17`。如需指定版本，設定 `JENKINS_IMAGE` 環境變數：
+測試預設使用 `jenkins/jenkins:lts-jdk21`。如需指定版本，設定 `JENKINS_IMAGE` 環境變數：
 
 ```bash
-JENKINS_IMAGE=jenkins/jenkins:2.516.2-jdk17 pytest -v
+JENKINS_IMAGE=jenkins/jenkins:2.516.2-jdk21 pytest -v
 ```
 
 ### 常見問題排除
@@ -183,7 +183,7 @@ tests/
   - 啟動 Jenkins Docker container
   - 整個測試 session 只啟動一次，多個測試共用
   - 使用 testcontainers 管理生命週期
-  - 可透過 `JENKINS_IMAGE` 指定 base image（預設 `jenkins/jenkins:lts-jdk17`）
+  - 可透過 `JENKINS_IMAGE` 指定 base image（預設 `jenkins/jenkins:lts-jdk21`）
 
 - **`jenkins_instance`** (session scope)
   - 提供 `JenkinsTestInstance` 物件
