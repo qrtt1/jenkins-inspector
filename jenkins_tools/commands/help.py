@@ -36,6 +36,7 @@ class HelpCommand(Command):
         "domain": "Manage credentials domains",
         "prompt": "Display AI agent guide for using jenkee",
         "help": "Show help information",
+        "dev-qa": "Toggle config directory for jenkee QA testing (internal use)",
     }
 
     # 危險命令集合（需要使用者確認才能執行）
@@ -45,6 +46,11 @@ class HelpCommand(Command):
         "enable-job",  # 啟用 job
         "delete-builds",  # 刪除 build 記錄（不可逆）
         "groovy",  # 可執行任意操作
+    }
+
+    # 隱藏命令集合（不在一般 help 中顯示）
+    HIDDEN_COMMANDS = {
+        "dev-qa",  # 測試用命令
     }
 
     def __init__(self, args=None):
@@ -85,9 +91,12 @@ class HelpCommand(Command):
         # 根據是否顯示危險命令，分類顯示
         safe_commands = []
         dangerous_commands = []
+        hidden_commands = []
 
         for cmd in sorted(self.COMMAND_DESCRIPTIONS.keys()):
-            if cmd in self.DANGEROUS_COMMANDS:
+            if cmd in self.HIDDEN_COMMANDS:
+                hidden_commands.append(cmd)
+            elif cmd in self.DANGEROUS_COMMANDS:
                 dangerous_commands.append(cmd)
             else:
                 safe_commands.append(cmd)
@@ -107,6 +116,15 @@ class HelpCommand(Command):
             for cmd in dangerous_commands:
                 desc = self.COMMAND_DESCRIPTIONS[cmd]
                 print(f"  {cmd:25s} {desc} ⚠️")
+
+        # 如果有 --all flag，顯示隱藏命令
+        if self.show_dangerous and hidden_commands:
+            print()
+            print("Hidden commands (for internal use):")
+            print()
+            for cmd in hidden_commands:
+                desc = self.COMMAND_DESCRIPTIONS[cmd]
+                print(f"  {cmd:25s} {desc}")
 
         print()
         print(

@@ -45,7 +45,7 @@ def main():
 
     # Handle global --help or -h flag
     if command in ("--help", "-h"):
-        cmd = HelpCommand()
+        cmd = HelpCommand(sys.argv[2:])
         sys.exit(cmd.execute())
 
     # Dispatch to appropriate command
