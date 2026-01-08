@@ -53,7 +53,7 @@ println "Buildable: " + job.buildable
 println ""
 
 // Health report
-if (job.buildHealth && job.buildHealth.score != null) {{
+if (job.hasProperty('buildHealth') && job.buildHealth && job.buildHealth.score != null) {{
     def health = job.buildHealth
     println "=== Health ==="
     println "Score: " + health.score + "%"
@@ -85,7 +85,7 @@ println ""
 
 // Downstream projects (this job triggers)
 println "=== Downstream Projects ==="
-if (job.downstreamProjects && job.downstreamProjects.size() > 0) {{
+if (job.hasProperty('downstreamProjects') && job.downstreamProjects && job.downstreamProjects.size() > 0) {{
     job.downstreamProjects.each {{ downstream ->
         println "  - " + downstream.fullName
     }}
@@ -96,7 +96,7 @@ println ""
 
 // Upstream projects (triggered by)
 println "=== Upstream Projects ==="
-if (job.upstreamProjects && job.upstreamProjects.size() > 0) {{
+if (job.hasProperty('upstreamProjects') && job.upstreamProjects && job.upstreamProjects.size() > 0) {{
     job.upstreamProjects.each {{ upstream ->
         println "  - " + upstream.fullName
     }}
