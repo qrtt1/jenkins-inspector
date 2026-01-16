@@ -158,6 +158,10 @@ jenkee prompt --ignore-override
 
 詳細說明請參考 [docs/examples/prompt.md](docs/examples/prompt.md)。
 
+### Claude Code Skill
+
+如果你使用 [Claude Code CLI](https://github.com/anthropics/claude-code)，可以直接使用 `jenkins-helper` skill，它整合了 jenkee 的完整功能和最佳實踐。skill 位於 `./skills/jenkins-helper/` 目錄，包含詳細的使用指引和安全協議。
+
 ## 設定認證
 
 ```bash
