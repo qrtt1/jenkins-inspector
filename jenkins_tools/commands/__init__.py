@@ -25,6 +25,7 @@ from jenkins_tools.commands.domain import DomainCommand
 from jenkins_tools.commands.help import HelpCommand
 from jenkins_tools.commands.prompt import PromptCommand
 from jenkins_tools.commands.dev_qa import DevQACommand
+from jenkins_tools.commands.profile import ProfileCommand
 
 __all__ = [
     "AuthCommand",
@@ -52,4 +53,5 @@ __all__ = [
     "HelpCommand",
     "PromptCommand",
     "DevQACommand",
+    "ProfileCommand",
 ]
