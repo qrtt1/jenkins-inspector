@@ -1,5 +1,6 @@
 """Jenkins CLI main entry point"""
 
+import os
 import sys
 from pathlib import Path
 
@@ -29,23 +30,51 @@ from jenkins_tools.commands import (
     HelpCommand,
     PromptCommand,
     DevQACommand,
+    ProfileCommand,
 )
 from jenkins_tools.commands.gcp import GCPCommand
+
+
+def _extract_profile_flag(argv: list[str]) -> list[str]:
+    """
+    Pull a global `--profile <name>` flag out of argv, wherever it appears,
+    and apply it as JENKEE_PROFILE for this process.
+
+    This keeps every existing Command unaware of --profile entirely:
+    JenkinsConfig already reads JENKEE_PROFILE from the environment, so a
+    CLI flag and an exported env var end up on the exact same code path.
+    """
+    result = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--profile":
+            if i + 1 >= len(argv):
+                print("Error: --profile requires a value", file=sys.stderr)
+                sys.exit(1)
+            os.environ["JENKEE_PROFILE"] = argv[i + 1]
+            i += 2
+            continue
+        result.append(argv[i])
+        i += 1
+    return result
 
 
 def main():
     """Main entry point for CLI command"""
     program_name = Path(sys.argv[0]).name if sys.argv else "jenkee"
-    if len(sys.argv) < 2:
+
+    argv = _extract_profile_flag(sys.argv[1:])
+
+    if len(argv) < 1:
         # 沒有參數時顯示命令列表
         cmd = HelpCommand()
         sys.exit(cmd.execute())
 
-    command = sys.argv[1]
+    command = argv[0]
 
     # Handle global --help or -h flag
     if command in ("--help", "-h"):
-        cmd = HelpCommand(sys.argv[2:])
+        cmd = HelpCommand(argv[1:])
         sys.exit(cmd.execute())
 
     # Dispatch to appropriate command
@@ -56,76 +85,79 @@ def main():
         cmd = ListViewsCommand()
         sys.exit(cmd.execute())
     elif command == "list-jobs":
-        cmd = ListJobsCommand(sys.argv[2:])
+        cmd = ListJobsCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "get-job":
-        cmd = GetJobCommand(sys.argv[2:])
+        cmd = GetJobCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "list-builds":
-        cmd = ListBuildsCommand(sys.argv[2:])
+        cmd = ListBuildsCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "console":
-        cmd = ConsoleCommand(sys.argv[2:])
+        cmd = ConsoleCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "job-status":
-        cmd = JobStatusCommand(sys.argv[2:])
+        cmd = JobStatusCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "job-diff":
-        cmd = JobDiffCommand(sys.argv[2:])
+        cmd = JobDiffCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "list-credentials":
-        cmd = ListCredentialsCommand(sys.argv[2:])
+        cmd = ListCredentialsCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "describe-credentials":
-        cmd = DescribeCredentialsCommand(sys.argv[2:])
+        cmd = DescribeCredentialsCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "add-job-to-view":
-        cmd = AddJobToViewCommand(sys.argv[2:])
+        cmd = AddJobToViewCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "copy-job":
-        cmd = CopyJobCommand(sys.argv[2:])
+        cmd = CopyJobCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "update-job":
-        cmd = UpdateJobCommand(sys.argv[2:])
+        cmd = UpdateJobCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "build":
-        cmd = BuildCommand(sys.argv[2:])
+        cmd = BuildCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "stop-builds":
-        cmd = StopBuildsCommand(sys.argv[2:])
+        cmd = StopBuildsCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "create-job":
-        cmd = CreateJobCommand(sys.argv[2:])
+        cmd = CreateJobCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "delete-job":
-        cmd = DeleteJobCommand(sys.argv[2:])
+        cmd = DeleteJobCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "disable-job":
-        cmd = DisableJobCommand(sys.argv[2:])
+        cmd = DisableJobCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "enable-job":
-        cmd = EnableJobCommand(sys.argv[2:])
+        cmd = EnableJobCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "delete-builds":
-        cmd = DeleteBuildsCommand(sys.argv[2:])
+        cmd = DeleteBuildsCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "groovy":
-        cmd = GroovyCommand(sys.argv[2:])
+        cmd = GroovyCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "gcp":
-        cmd = GCPCommand(sys.argv[2:])
+        cmd = GCPCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "domain":
-        cmd = DomainCommand(sys.argv[2:])
+        cmd = DomainCommand(argv[1:])
+        sys.exit(cmd.execute())
+    elif command == "profile":
+        cmd = ProfileCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "prompt":
-        cmd = PromptCommand(sys.argv[2:])
+        cmd = PromptCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "help":
-        cmd = HelpCommand(sys.argv[2:])
+        cmd = HelpCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "dev-qa":
-        cmd = DevQACommand(sys.argv[2:])
+        cmd = DevQACommand(argv[1:])
         sys.exit(cmd.execute())
     else:
         print(f"Error: Unknown command '{command}'", file=sys.stderr)
