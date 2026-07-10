@@ -51,6 +51,19 @@ def test_list_marks_env_override_as_active(tmp_path, monkeypatch, capsys):
     assert "ops (active)" in capsys.readouterr().out
 
 
+def test_list_survives_broken_current_profile_state(tmp_path, capsys):
+    """Test that list works as a recovery tool when current_profile is broken."""
+    # Set current_profile to point to a non-existent profile
+    (tmp_path / "current_profile").write_text("ghost\n")
+
+    exit_code = ProfileCommand(["list"], base_dir=tmp_path).execute()
+
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Available profiles:" in out
+    assert "default" in out
+
+
 def test_use_switches_persistent_state(tmp_path, capsys):
     _write_profile(tmp_path, "ops", "http://ops/")
 
