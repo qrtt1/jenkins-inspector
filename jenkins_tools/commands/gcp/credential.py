@@ -386,7 +386,7 @@ class CredentialCommand(DangerousCommandMixin, Command):
 
         credential_id = args[0]
         operation_desc = f"delete gcp credential '{credential_id}'"
-        if not self.require_confirmation(operation_desc):
+        if not self.require_confirmation(operation_desc, config):
             return 0
 
         # Create Groovy script to delete the credential

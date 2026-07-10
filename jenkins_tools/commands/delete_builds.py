@@ -47,7 +47,7 @@ class DeleteBuildsCommand(DangerousCommandMixin, Command):
         build_range = self.args[1]
 
         operation_desc = f"delete build(s) {build_range} for job '{job_name}'"
-        if not self.require_confirmation(operation_desc):
+        if not self.require_confirmation(operation_desc, config):
             return 0
 
         # Execute delete-builds command

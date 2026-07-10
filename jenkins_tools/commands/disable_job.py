@@ -47,7 +47,7 @@ class DisableJobCommand(DangerousCommandMixin, Command):
             operation_desc = f"disable {len(job_names)} job(s)"
 
         # Require confirmation
-        if not self.require_confirmation(operation_desc):
+        if not self.require_confirmation(operation_desc, config):
             return 0
 
         # Disable each job

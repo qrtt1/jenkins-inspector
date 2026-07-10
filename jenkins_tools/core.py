@@ -60,16 +60,28 @@ class DangerousCommandMixin:
         # Call parent class __init__ if it exists
         super().__init__(*args, **kwargs)
 
-    def require_confirmation(self, operation_description: str) -> bool:
+    def require_confirmation(
+        self, operation_description: str, config: "Optional[JenkinsConfig]" = None
+    ) -> bool:
         """
         Check for confirmation or prompt for interactive confirmation
 
         Args:
             operation_description: Description of the operation (e.g., "delete job 'test-job'")
+            config: The JenkinsConfig in effect for this command. When it's the
+                default profile, JenkinsConfig stays silent about it (to avoid
+                changing output for default-profile users elsewhere), so this
+                method prints the active site here instead -- unconditionally,
+                even when --yes-i-really-mean-it skips the interactive prompt.
+                Named profiles already announced themselves when JenkinsConfig
+                was constructed, so nothing further is printed here for them.
 
         Returns:
             True if confirmed (either via flag or user input), False if cancelled
         """
+        if config is not None and config.profile_name is None:
+            print(f"Active profile: default ({config.jenkins_url})")
+
         # Check if confirmation flag was present
         if self._skip_confirmation:
             return True

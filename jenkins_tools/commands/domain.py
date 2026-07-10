@@ -160,7 +160,7 @@ class DomainCommand(DangerousCommandMixin, Command):
             print("Run 'jenkee domain list' to see all domains.", file=sys.stderr)
             return 1
 
-        if not self.require_confirmation(f"create domain '{domain_name}'"):
+        if not self.require_confirmation(f"create domain '{domain_name}'", config):
             return 0
 
         domain_xml = self._generate_domain_xml(domain_name, description)
@@ -228,7 +228,7 @@ class DomainCommand(DangerousCommandMixin, Command):
                 print("Run 'jenkee domain list' to see all domains.", file=sys.stderr)
                 return 1
 
-        if not self.require_confirmation(f"update domain '{domain_name}'"):
+        if not self.require_confirmation(f"update domain '{domain_name}'", config):
             return 0
 
         final_name = new_name or domain_name
@@ -315,7 +315,7 @@ class DomainCommand(DangerousCommandMixin, Command):
             print(f"  jenkee domain delete {domain_name} --yes-i-really-mean-it --force")
             return 1
 
-        if not self.require_confirmation(f"delete domain '{domain_name}'"):
+        if not self.require_confirmation(f"delete domain '{domain_name}'", config):
             return 0
 
         cli = JenkinsCLI(config)

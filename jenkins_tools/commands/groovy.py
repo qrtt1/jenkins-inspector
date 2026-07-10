@@ -61,7 +61,7 @@ class GroovyCommand(DangerousCommandMixin, Command):
         else:
             operation_desc = "execute groovy script from stdin"
 
-        if not self.require_confirmation(operation_desc):
+        if not self.require_confirmation(operation_desc, config):
             return 0
 
         # Execute groovy command via Jenkins CLI
