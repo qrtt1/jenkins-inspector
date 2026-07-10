@@ -28,7 +28,8 @@ def tokenValue = "1100000000000000000000000000000000"
 
 def existingToken = tokenStore.tokenList.find { it.name == tokenName }
 if (existingToken == null) {
-    tokenStore.addFixedNewToken(tokenName, tokenValue)
+    // Jenkins 2.5xx 起 addFixedNewToken 多了第三個過期日參數；null 代表永不過期
+    tokenStore.addFixedNewToken(tokenName, tokenValue, null)
 }
 
 user.save()
