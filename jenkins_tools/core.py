@@ -90,18 +90,75 @@ class DangerousCommandMixin:
 class JenkinsConfig:
     """Manage Jenkins configuration"""
 
-    def __init__(self):
+    @staticmethod
+    def default_base_dir() -> Path:
+        """Directory holding .env, profiles/, and current_profile"""
+        return Path.home() / ".jenkins-inspector"
+
+    def __init__(self, base_dir: Optional[Path] = None):
         # Load .env from ~/.jenkins-inspector/ only.
         # If a legacy file exists at ~/.jenkins-studio/.env, we intentionally do NOT load it.
-        legacy_env_path = Path.home() / ".jenkins-studio" / ".env"
-        env_path = Path.home() / ".jenkins-inspector" / ".env"
+        self.legacy_env_path = Path.home() / ".jenkins-studio" / ".env"
+        self.base_dir = base_dir or self.default_base_dir()
+        self.env_path = self.base_dir / ".env"
+        self.profiles_dir = self.base_dir / "profiles"
+        self.current_profile_path = self.base_dir / "current_profile"
+
+        self.profile_name, self.profile_source, error = self._resolve_active_profile()
+
+        if error:
+            print(f"Error: {error}", file=sys.stderr)
+            sys.exit(1)
+
+        resolved_env_path = (
+            self.profiles_dir / f"{self.profile_name}.env"
+            if self.profile_name
+            else self.env_path
+        )
+
         # override=False: 環境變數優先於 .env 檔案（重要：讓測試可以覆蓋設定）
-        load_dotenv(env_path, override=False)
+        load_dotenv(resolved_env_path, override=False)
         self.jenkins_url = os.getenv("JENKINS_URL")
         self.username = os.getenv("JENKINS_USER_ID")
         self.api_token = os.getenv("JENKINS_API_TOKEN")
-        self.env_path = env_path
-        self.legacy_env_path = legacy_env_path
+
+        if self.profile_name:
+            print(f"Active profile: {self.profile_name} ({self.jenkins_url})", file=sys.stderr)
+
+    def _resolve_active_profile(self) -> tuple[Optional[str], str, Optional[str]]:
+        """
+        Determine which profile should be loaded.
+
+        Returns:
+            (profile_name, source, error_message). profile_name is None when the
+            default ~/.jenkins-inspector/.env should be used. error_message is set
+            when a named profile was requested but its file is missing -- callers
+            must treat that as fatal, never fall back silently to the default.
+        """
+        env_profile = os.getenv("JENKEE_PROFILE", "").strip()
+        if env_profile:
+            profile_path = self.profiles_dir / f"{env_profile}.env"
+            if not profile_path.exists():
+                return None, "env-override", (
+                    f"profile '{env_profile}' not found at {profile_path}.\n"
+                    f"Run 'jenkee profile list' to see available profiles, "
+                    f"or unset JENKEE_PROFILE to use the default config."
+                )
+            return env_profile, "env-override", None
+
+        if self.current_profile_path.exists():
+            state_profile = self.current_profile_path.read_text().strip()
+            if state_profile:
+                profile_path = self.profiles_dir / f"{state_profile}.env"
+                if not profile_path.exists():
+                    return None, "persistent", (
+                        f"current profile '{state_profile}' (set via 'jenkee profile use') "
+                        f"no longer exists at {profile_path}.\n"
+                        f"Run 'jenkee profile use --default' or 'jenkee profile use <name>' to fix this."
+                    )
+                return state_profile, "persistent", None
+
+        return None, "default", None
 
     @property
     def jenkins_cli_jar_url(self) -> str:
