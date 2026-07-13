@@ -26,6 +26,7 @@
 - 🧪 完整的測試覆蓋所有功能
 - 🤖 專為 AI Agent 設計的互動模式
 - 🔒 支援多種 Jenkins credentials 類型
+- 🌐 支援多站台 profile，一個 CLI 管理多組 Jenkins
 - 📦 透過 PyPI 輕鬆安裝
 - 💬 清晰的 help 訊息，AI agent 容易理解
 
@@ -158,6 +159,7 @@ jenkee auth
 | `job-diff` | 比較兩個 job 配置差異 | `jenkee job-diff <job1> <job2>` |
 | `list-credentials` | 列出 Jenkins credentials metadata | `jenkee list-credentials [domain]` |
 | `describe-credentials` | 查看特定 credential 詳細資訊 | `jenkee describe-credentials <id> [--show-secret]` |
+| `domain` | 管理 credentials domains | `jenkee domain list\|create <name>` |
 | `add-job-to-view` | 將 jobs 加入到 view | `jenkee add-job-to-view <view> <job> [job ...]` |
 | `copy-job` | 複製 job 為新 job | `jenkee copy-job <source> <destination>` |
 | `update-job` | 更新 job 配置 | `jenkee update-job <job> < config.xml` |
@@ -191,6 +193,11 @@ jenkee auth
 - 列出所有 credentials metadata
 - 查看 credentials 類型與相關資訊
 - 驗證 credentials 配置
+
+### 5. 多站台 Profile 管理
+- 用 named profile 管理多組 Jenkins 連線設定
+- `jenkee profile list/use/current` 列出、切換、查詢目前站台
+- 也可用 `--profile <name>` 或 `JENKEE_PROFILE` 環境變數單次覆蓋，不動持久設定
 
 ## 文件
 

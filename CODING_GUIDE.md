@@ -179,7 +179,7 @@ jenkins-inspector/
 5. 在 `cli.py` 新增 dispatch 邏輯
 6. **建立示範文件** `docs/examples/<command-name>.md`
 7. **更新 help 命令** - 在 `commands/help.py` 的命令列表中加入新命令
-8. **更新 prompt 命令** - 在 `commands/prompt.py` 的指引中加入新命令說明
+8. **更新 jenkins-helper skill** - 如果是 AI agent 常用的操作，在 `plugins/jenkins-helper/skills/jenkins-helper/SKILL.md` 加入對應說明（jenkee 已移除 `prompt` 指令，AI agent 指引現在只由這份 skill 維護）
 9. **使用 Black 格式化程式碼** - 完成後執行 `black jenkins_tools/`
 
 ### 危險命令的開發
@@ -469,16 +469,16 @@ black --check jenkins_tools/
 
 1. **遵循命名慣例** - 使用 snake_case 檔名，PascalCase 類別名稱
 2. **保持一致性** - 參考現有 command 的實作風格
-3. **完整實作** - 不要跳過任何步驟（help、prompt、example）
+3. **完整實作** - 不要跳過任何步驟（help、example、必要時的 skill 文件）
 4. **測試功能** - 實際執行命令確認功能正常
 
 ### 完成時
 
 1. **更新 help 命令** - 在 `commands/help.py` 加入新命令
-2. **更新 prompt 命令** - 在 `commands/prompt.py` 加入新命令說明
+2. **更新 jenkins-helper skill**（如適用）- 在 `plugins/jenkins-helper/skills/jenkins-helper/SKILL.md` 加入說明
 3. **建立範例文件** - 在 `docs/examples/` 建立詳細文件
 4. **執行 Black** - `black jenkins_tools/` 格式化所有程式碼
-5. **測試整合** - 確認 `jks help`、`jks prompt` 和 `jks <new-command>` 都正常運作
+5. **測試整合** - 確認 `jks help` 和 `jks <new-command>` 都正常運作
 
 ### Checklist
 
@@ -489,12 +489,11 @@ black --check jenkins_tools/
 - [ ] 在 `commands/__init__.py` 匯出
 - [ ] 在 `cli.py` 新增 dispatch
 - [ ] 更新 `commands/help.py` 命令列表
-- [ ] 更新 `commands/prompt.py` 命令說明
+- [ ] 更新 jenkins-helper skill（如適用）
 - [ ] 建立 `docs/examples/<command>.md`
 - [ ] 執行 `black jenkins_tools/`
 - [ ] 測試 `jks <command>` 功能
 - [ ] 測試 `jks help <command>` 顯示
-- [ ] 確認 `jks prompt` 包含新命令
 
 **如果是危險命令，額外檢查**：
 
