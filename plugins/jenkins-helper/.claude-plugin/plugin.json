@@ -1,0 +1,22 @@
+{
+  "name": "jenkins-helper",
+  "version": "1.0.0",
+  "description": "Manage and interact with Jenkins using the jenkee CLI tool: job management, build monitoring, credential handling, configuration updates, and multi-site profile switching.",
+  "author": {
+    "name": "qrtt1"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/jenkee-guard.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

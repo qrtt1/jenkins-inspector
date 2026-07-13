@@ -160,7 +160,14 @@ jenkee prompt --ignore-override
 
 ### Claude Code Skill
 
-如果你使用 [Claude Code CLI](https://github.com/anthropics/claude-code)，可以直接使用 `jenkins-helper` skill，它整合了 jenkee 的完整功能和最佳實踐。skill 位於 `./skills/jenkins-helper/` 目錄，包含詳細的使用指引和安全協議。
+如果你使用 [Claude Code CLI](https://github.com/anthropics/claude-code)，可以透過 marketplace 安裝 `jenkins-helper` plugin，它整合了 jenkee 的完整功能和最佳實踐，並附帶一個攔截危險 jenkee 指令、提醒確認目標站台的 PreToolUse hook。
+
+```bash
+/plugin marketplace add qrtt1/jenkins-inspector
+/plugin install jenkins-helper@jenkins-inspector
+```
+
+plugin 原始碼位於 [`plugins/jenkins-helper/`](plugins/jenkins-helper/)。
 
 ## 設定認證
 
