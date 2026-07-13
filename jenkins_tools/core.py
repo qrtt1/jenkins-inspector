@@ -128,8 +128,9 @@ class JenkinsConfig:
             else self.env_path
         )
 
-        # override=False: 環境變數優先於 .env 檔案（重要：讓測試可以覆蓋設定）
-        load_dotenv(resolved_env_path, override=False)
+        # 預設 override=False 讓環境變數優先，方便測試不寫檔就能覆蓋設定；
+        # 但 named profile 是使用者明確選定的，不該被殘留的 shell export 蓋掉。
+        load_dotenv(resolved_env_path, override=self.profile_name is not None)
         self.jenkins_url = os.getenv("JENKINS_URL")
         self.username = os.getenv("JENKINS_USER_ID")
         self.api_token = os.getenv("JENKINS_API_TOKEN")
@@ -159,7 +160,13 @@ class JenkinsConfig:
             return env_profile, "env-override", None
 
         if self.current_profile_path.exists():
-            state_profile = self.current_profile_path.read_text().strip()
+            try:
+                state_profile = self.current_profile_path.read_text().strip()
+            except (OSError, UnicodeDecodeError) as exc:
+                return None, "persistent", (
+                    f"current_profile at {self.current_profile_path} is unreadable ({exc}).\n"
+                    f"Run 'jenkee profile use --default' or 'jenkee profile use <name>' to fix this."
+                )
             if state_profile:
                 profile_path = self.profiles_dir / f"{state_profile}.env"
                 if not profile_path.exists():

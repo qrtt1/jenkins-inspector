@@ -1,11 +1,14 @@
 """Profile command - manage named Jenkins connection profiles"""
 
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Optional
 
 from jenkins_tools.core import Command, JenkinsConfig
+
+_VALID_PROFILE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class ProfileCommand(Command):
@@ -73,10 +76,21 @@ class ProfileCommand(Command):
 
         if target == "--default":
             if current_profile_path.exists():
-                current_profile_path.unlink()
+                try:
+                    current_profile_path.unlink()
+                except OSError as exc:
+                    print(f"Error: could not remove {current_profile_path} ({exc})", file=sys.stderr)
+                    print(f"Remove it manually: rm -rf {current_profile_path}", file=sys.stderr)
+                    return 1
             print("✓ Switched to default profile")
             print(f"  Using: {self.base_dir / '.env'}")
             return 0
+
+        if not _VALID_PROFILE_NAME.match(target) or target == "default":
+            print(f"Error: Invalid profile name '{target}'", file=sys.stderr)
+            print("Profile names may only contain letters, digits, '-' and '_', "
+                  "and cannot be 'default'.", file=sys.stderr)
+            return 1
 
         profile_path = self.base_dir / "profiles" / f"{target}.env"
         if not profile_path.exists():
@@ -92,7 +106,9 @@ class ProfileCommand(Command):
             return 1
 
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        current_profile_path.write_text(f"{target}\n")
+        tmp_path = current_profile_path.with_suffix(".tmp")
+        tmp_path.write_text(f"{target}\n")
+        os.replace(tmp_path, current_profile_path)
         print(f"✓ Switched to profile '{target}'")
         print(f"  Using: {profile_path}")
         return 0
@@ -129,7 +145,10 @@ class ProfileCommand(Command):
 
         current_profile_path = self.base_dir / "current_profile"
         if current_profile_path.exists():
-            stored = current_profile_path.read_text().strip()
+            try:
+                stored = current_profile_path.read_text().strip()
+            except (OSError, UnicodeDecodeError):
+                return None
             if stored:
                 return stored
 

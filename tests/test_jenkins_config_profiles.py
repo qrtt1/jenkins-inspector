@@ -57,6 +57,22 @@ def test_current_profile_state_file_used_without_env_override(tmp_path):
     assert config.jenkins_url == "http://ops/"
 
 
+def test_named_profile_overrides_stale_process_env_vars(tmp_path, monkeypatch):
+    """已 export 的 JENKINS_URL 等變數不該蓋掉明確選定的 named profile 內容。"""
+    _write_profile(tmp_path, "ops", "http://ops/")
+    (tmp_path / "current_profile").write_text("ops\n")
+    monkeypatch.setenv("JENKINS_URL", "http://stale-shell-export/")
+    monkeypatch.setenv("JENKINS_USER_ID", "stale-user")
+    monkeypatch.setenv("JENKINS_API_TOKEN", "stale-token")
+
+    config = JenkinsConfig(base_dir=tmp_path)
+
+    assert config.profile_name == "ops"
+    assert config.jenkins_url == "http://ops/"
+    assert config.username == "u"
+    assert config.api_token == "t"
+
+
 def test_env_var_takes_precedence_over_state_file(tmp_path, monkeypatch):
     _write_profile(tmp_path, "ops", "http://ops/")
     _write_profile(tmp_path, "pchome-prod", "http://pchome/")
@@ -79,6 +95,30 @@ def test_missing_profile_from_env_var_exits_with_error(tmp_path, monkeypatch, ca
     err = capsys.readouterr().err
     assert "does-not-exist" in err
     assert "jenkee profile list" in err
+
+
+def test_current_profile_as_directory_exits_with_clear_error(tmp_path, capsys):
+    (tmp_path / "current_profile").mkdir()
+
+    with pytest.raises(SystemExit) as exc_info:
+        JenkinsConfig(base_dir=tmp_path)
+
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "current_profile" in err
+    assert "profile use --default" in err
+
+
+def test_current_profile_with_bad_encoding_exits_with_clear_error(tmp_path, capsys):
+    (tmp_path / "current_profile").write_bytes(b"\xff\xfe\x00broken")
+
+    with pytest.raises(SystemExit) as exc_info:
+        JenkinsConfig(base_dir=tmp_path)
+
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "current_profile" in err
+    assert "profile use --default" in err
 
 
 def test_missing_profile_from_state_file_exits_with_error(tmp_path, capsys):
