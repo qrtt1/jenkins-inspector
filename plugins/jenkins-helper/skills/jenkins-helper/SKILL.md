@@ -32,7 +32,7 @@ pipx install jenkee
 **Installation details:**
 - PyPI package: `jenkee`
 - GitHub repository: https://github.com/qrtt1/jenkins-inspector
-- Documentation: Available via `jenkee prompt` after installation
+- Documentation: `jenkee help` (all commands) and `jenkee help <command>` (per-command syntax, options, and examples) after installation
 
 ### Authentication Setup (User Responsibility)
 
@@ -124,25 +124,13 @@ jenkee profile current
 
 If this reports a profile you didn't expect, confirm with the user which Jenkins site they mean before proceeding — do not silently assume the default.
 
-4. **Learn jenkee usage by reading its documentation:**
-
-**IMPORTANT:** Always run `jenkee prompt` at the start of each session to get the latest documentation for the installed version:
+4. **Confirm the current command surface:**
 
 ```bash
-jenkee prompt
+jenkee help
 ```
 
-This command returns comprehensive documentation including:
-- All available commands and their usage
-- Common workflows and examples
-- Safety guidelines (especially for the groovy command)
-- Latest features and changes
-
-The documentation you receive from `jenkee prompt` is authoritative and version-specific. Always refer to it for:
-- Exact command syntax
-- Available options and flags
-- Usage examples
-- Best practices
+Command names and flags can change between versions. `jenkee help` always reflects the version actually installed, so treat its output as authoritative over anything memorized here. Run `jenkee help <command>` for the full syntax, options, and worked examples of any specific command before using it for the first time in a session.
 
 ## Core Workflows
 
@@ -179,6 +167,16 @@ jenkee console <job-name>
 jenkee console <job-name> <build-number>
 ```
 
+### Triggering and Stopping Builds
+
+```bash
+# Trigger a build (see `jenkee help build` for parameters, sync/follow flags)
+jenkee build <job-name>
+
+# Stop running builds for one or more jobs
+jenkee stop-builds <job-name> [job-name ...]
+```
+
 ### Modifying Job Configuration
 
 To modify job settings like changing the branch:
@@ -206,9 +204,25 @@ Never reuse old local XML files. Always run `jenkee get-job` immediately before 
 - Update the `<name>` field to the desired branch (e.g., `*/foobar` or `foobar`)
 - Preserve all XML structure and formatting
 
-### Managing Credentials
+### Creating Jobs and Organizing Views
 
 ```bash
+# Create a new job from an XML configuration file
+jenkee create-job <job-name> < config.xml
+
+# Add existing jobs to a view
+jenkee add-job-to-view <view-name> <job-name> [job-name ...]
+```
+
+### Managing Credentials and Domains
+
+```bash
+# List all credential domains
+jenkee domain list
+
+# Create a new domain (requires confirmation)
+jenkee domain create <name> --description="..." --yes-i-really-mean-it
+
 # List all credentials
 jenkee list-credentials
 
@@ -278,9 +292,6 @@ To view advanced features documentation:
 ```bash
 # View all commands including advanced ones
 jenkee help --all
-
-# View complete documentation including advanced features
-jenkee prompt --all
 ```
 
 ### Advanced Feature Categories
@@ -297,12 +308,12 @@ jenkee prompt --all
 **Before using ANY advanced feature, you MUST:**
 
 1. **Discover the feature exists:**
-   - Run `jenkee help --all` or `jenkee prompt --all`
-   - Read the complete documentation for the specific command
+   - Run `jenkee help --all`
+   - Read the complete documentation for the specific command with `jenkee help <command>`
 
 2. **Verify it's the only solution:**
    - Confirm there is NO standard (non-advanced) command that can accomplish the task
-   - Check `jenkee prompt` (without --all) for alternatives
+   - Check `jenkee help` (without --all) for alternatives
 
 3. **Confirm the target site:**
    - If the user has more than one profile configured, run `jenkee profile current` (or read the `Active profile: ...` banner jenkee prints before the confirmation prompt) and confirm it matches the site the user actually means
@@ -342,7 +353,7 @@ AI:
 I need to use the advanced `groovy` command.
 
 Let me get the advanced documentation first:
-[Runs: jenkee prompt --all]
+[Runs: jenkee help --all]
 
 Based on the documentation, I can write a groovy script that:
 - Reads all job configurations (read-only)
@@ -379,15 +390,14 @@ This is read-only and safe. May I proceed?"
 
 ## Important Guidelines
 
-1. **Always run `jenkee prompt` first** - Get the latest version-specific documentation before any operations
+1. **Run `jenkee help` (and `jenkee help <command>` for unfamiliar commands)** — it reflects the exact version installed, so trust it over anything memorized here
 2. **Verify authentication** with `jenkee auth`
 3. **Check the active profile** with `jenkee profile current` whenever the user works with more than one Jenkins site, and before any destructive command
-4. **Use `jenkee help <command>`** for detailed command-specific documentation
-5. **Advanced features require `--all` flag** - Run `jenkee help --all` or `jenkee prompt --all` to access
-6. **Advanced features require explicit user approval** - Follow the mandatory safety protocol above
-7. **Job names are case-sensitive** - Use exact names when referencing jobs
-8. **XML editing requires care** - Always backup configuration before modifying
+4. **Advanced features require `--all` flag** - Run `jenkee help --all` to access
+5. **Advanced features require explicit user approval** - Follow the mandatory safety protocol above
+6. **Job names are case-sensitive** - Use exact names when referencing jobs
+7. **XML editing requires care** - Always backup configuration before modifying
 
 ## Version Compatibility
 
-This skill is designed to work with any version of jenkee. The `jenkee prompt` command provides version-specific documentation, ensuring compatibility across updates.
+This skill covers the command surface as of the version it shipped with. `jenkee help` and `jenkee help <command>` are always accurate for whatever version is actually installed — when in doubt about exact syntax or whether a command still exists, defer to their output over this document.
