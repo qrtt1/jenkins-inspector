@@ -1,13 +1,13 @@
 ---
 name: jenkins-helper
-description: "Manage and interact with Jenkins using the jenkee CLI tool. TRIGGERING RULES: (A) MUST trigger when user mentions 'jenkins' or 'jenkee' with any Jenkins-related task. (B) MUST trigger when 'jks' appears with Jenkins context keywords like: job, build, console, credential, view, pipeline, or groovy. (C) When user only mentions 'jks' without clear context, ask for clarification before triggering. CAPABILITIES: (1) Finding jobs by name or pattern, (2) Checking job status, build history, or console logs, (3) Modifying job configurations like branch changes, (4) Managing credentials and domains, (5) Comparing job configurations, (6) Any other Jenkins-related operations. This skill uses the jenkee command-line tool (also aliased as jks)."
+description: "Manage and interact with Jenkins using the jenkee CLI tool. TRIGGERING RULES: (A) MUST trigger when user mentions 'jenkins' or 'jenkee' with any Jenkins-related task. (B) MUST trigger when 'jks' appears with Jenkins context keywords like: job, build, console, credential, view, pipeline, or groovy. (C) When user only mentions 'jks' without clear context, ask for clarification before triggering. CAPABILITIES: (1) Finding jobs by name or pattern, (2) Checking job status, build history, or console logs, (3) Modifying job configurations like branch changes, (4) Managing credentials and domains, (5) Comparing job configurations, (6) Switching between multiple Jenkins sites via profiles, (7) Any other Jenkins-related operations. This skill uses the jenkee command-line tool (also aliased as jks)."
 ---
 
 # Jenkins Helper
 
 ## Overview
 
-This skill enables interaction with Jenkins through the `jenkee` CLI tool (also aliased as `jks`), providing capabilities for job management, build monitoring, credential handling, and configuration updates.
+This skill enables interaction with Jenkins through the `jenkee` CLI tool (also aliased as `jks`), providing capabilities for job management, build monitoring, credential handling, configuration updates, and switching between multiple Jenkins sites.
 
 **Command aliases:**
 - `jenkee` - Primary command name
@@ -15,13 +15,11 @@ This skill enables interaction with Jenkins through the `jenkee` CLI tool (also 
 
 **Note:** This skill does NOT install or configure jenkee for the user. It only helps use jenkee once it's installed and configured.
 
-## Prerequisites and Setup
+## Setup
 
 ### Installation (User Responsibility)
 
 If jenkee is not installed, inform the user they need to install it themselves:
-
-**Installation options:**
 
 ```bash
 # Using pip
@@ -61,7 +59,44 @@ EOF
 
 **Important:** You should NOT create or modify these files for the user. Only provide the instructions.
 
-### Verification
+### Multiple Jenkins Sites (Profiles)
+
+jenkee supports named connection profiles for users who work with more than one Jenkins server. This is user-configured (each profile is its own `.env`-style file); the skill only helps *use* profiles that already exist.
+
+```bash
+# List all configured profiles, showing which one is active
+jenkee profile list
+
+# Switch the persistent active profile
+jenkee profile use <name>
+jenkee profile use --default
+
+# Show which profile is active and where its config came from
+jenkee profile current
+```
+
+A profile can also be selected just for one invocation without changing the persistent state:
+
+```bash
+jenkee --profile <name> <command>
+# or
+JENKEE_PROFILE=<name> jenkee <command>
+```
+
+If the user asks to create a new profile, give them the instructions (do not create files for them):
+
+```bash
+mkdir -p ~/.jenkins-inspector/profiles
+cat > ~/.jenkins-inspector/profiles/<name>.env << EOF
+JENKINS_URL=http://other-jenkins-server:8080/
+JENKINS_USER_ID=your_email@example.com
+JENKINS_API_TOKEN=your_api_token
+EOF
+```
+
+**Why this matters for safety:** when profiles are in use, `jenkee` always prints `Active profile: <name> (<url>)` before running, and again before any destructive confirmation. Read that line rather than assuming which Jenkins site a command targets — see the Safety Protocol below.
+
+## Verification
 
 Before using any jenkee commands:
 
@@ -81,7 +116,15 @@ jenkee auth
 
 If authentication fails, provide authentication setup instructions above and stop.
 
-3. **Learn jenkee usage by reading its documentation:**
+3. **Check which site is active (if profiles may be in use):**
+
+```bash
+jenkee profile current
+```
+
+If this reports a profile you didn't expect, confirm with the user which Jenkins site they mean before proceeding — do not silently assume the default.
+
+4. **Learn jenkee usage by reading its documentation:**
 
 **IMPORTANT:** Always run `jenkee prompt` at the start of each session to get the latest documentation for the installed version:
 
@@ -216,6 +259,14 @@ jenkee get-job <new-job-name> > config.xml
 jenkee update-job <new-job-name> < config.xml
 ```
 
+### Pattern 4: Operate on a specific site when multiple profiles exist
+
+```bash
+jenkee profile list
+jenkee profile use <name>
+jenkee job-status <job-name>   # now targets <name>'s Jenkins
+```
+
 ## Advanced Features (High-Risk Operations)
 
 jenkee includes advanced features that are **hidden by default** because they involve destructive operations, deletion, or executing arbitrary code. These features require explicit access and user confirmation.
@@ -253,19 +304,24 @@ jenkee prompt --all
    - Confirm there is NO standard (non-advanced) command that can accomplish the task
    - Check `jenkee prompt` (without --all) for alternatives
 
-3. **Present detailed proposal to user:**
+3. **Confirm the target site:**
+   - If the user has more than one profile configured, run `jenkee profile current` (or read the `Active profile: ...` banner jenkee prints before the confirmation prompt) and confirm it matches the site the user actually means
+   - A destructive command run against the wrong profile is not reversible by re-running it against the right one
+
+4. **Present detailed proposal to user:**
    - Explain what the command will do
+   - State which Jenkins site/profile it will run against
    - List all resources that will be affected
    - Describe the risks and consequences
    - Explain whether the operation is reversible or irreversible
    - Show the exact command you plan to execute
 
-4. **Get explicit user confirmation:**
+5. **Get explicit user confirmation:**
    - Wait for user to review and approve
    - Do NOT proceed without clear approval
    - If user has any doubts, discuss alternatives first
 
-5. **Execute with caution:**
+6. **Execute with caution:**
    - Run the approved command exactly as presented
    - Monitor the output for errors
    - Report the results back to user
@@ -319,17 +375,18 @@ This is read-only and safe. May I proceed?"
 - Groovy script execution
 - Bulk operations
 - System configuration changes
-- **MUST follow safety protocol**
+- **MUST follow safety protocol, including the target-site confirmation step**
 
 ## Important Guidelines
 
 1. **Always run `jenkee prompt` first** - Get the latest version-specific documentation before any operations
 2. **Verify authentication** with `jenkee auth`
-3. **Use `jenkee help <command>`** for detailed command-specific documentation
-4. **Advanced features require `--all` flag** - Run `jenkee help --all` or `jenkee prompt --all` to access
-5. **Advanced features require explicit user approval** - Follow the mandatory safety protocol above
-6. **Job names are case-sensitive** - Use exact names when referencing jobs
-7. **XML editing requires care** - Always backup configuration before modifying
+3. **Check the active profile** with `jenkee profile current` whenever the user works with more than one Jenkins site, and before any destructive command
+4. **Use `jenkee help <command>`** for detailed command-specific documentation
+5. **Advanced features require `--all` flag** - Run `jenkee help --all` or `jenkee prompt --all` to access
+6. **Advanced features require explicit user approval** - Follow the mandatory safety protocol above
+7. **Job names are case-sensitive** - Use exact names when referencing jobs
+8. **XML editing requires care** - Always backup configuration before modifying
 
 ## Version Compatibility
 
