@@ -23,6 +23,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Set up JDK 21 (jenkins-cli.jar requires it)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
