@@ -1,3 +1,6 @@
+from conftest import JenkinsTestInstance
+
+
 def test_auth_success(run_jenkee):
     """測試成功的認證情境"""
     # Arrange: 使用正確的 Jenkins 認證資訊（由 fixture 提供）
@@ -10,6 +13,15 @@ def test_auth_success(run_jenkee):
     assert "Authenticated as:" in result.stdout or "✓" in result.stdout
     # 驗證是我們建立的 jenkins-test 用戶
     assert "jenkins-test" in result.stdout
+
+
+def test_auth_runs_under_the_fixed_test_profile(run_jenkee_authed):
+    """整合層的第二道防線：就算 HOME 隔離哪天失效，這裡也會因為 profile
+    名稱對不上而炸開，而不是悄悄打到開發者本機真實設定的 Jenkins。"""
+    result = run_jenkee_authed.run("profile", "current")
+
+    assert result.returncode == 0
+    assert JenkinsTestInstance.TEST_PROFILE_NAME in result.stdout
 
 
 def test_auth_failure_with_wrong_token(run_jenkee_bad_auth):

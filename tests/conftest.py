@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import re
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -17,6 +18,11 @@ from testcontainers.core.wait_strategies import LogMessageWaitStrategy
 class JenkinsTestInstance:
     """封裝 Jenkins 測試實例的設定與連線資訊"""
 
+    # 固定、辨識度高的 profile 名稱，不會跟真實使用者機器上的 profile 撞名。
+    # 測試斷言 jenkee 回報的 active profile 就是這個名字，作為 HOME 隔離
+    # 失效時的第二道防線：一旦漏出真實設定，這個名字對不上就會立刻炸開。
+    TEST_PROFILE_NAME = "jenkee-test-fixture"
+
     def __init__(self, container: DockerContainer):
         self.container = container
         host = container.get_container_host_ip()
@@ -24,13 +30,41 @@ class JenkinsTestInstance:
         self.url = f"http://{host}:{port}/"
         self.username = "jenkins-test"
         self.token = "1100000000000000000000000000000000"
+        # 獨立的假 HOME，讓 jenkee 的 ~/.jenkins-inspector 不會撞到開發者本機
+        # 真實的 profiles/current_profile 設定（named profile 的優先權設計
+        # 會讓真實設定蓋過這裡注入的假 JENKINS_* 環境變數）
+        self._isolated_home = tempfile.mkdtemp(prefix="jenkee-test-home-")
+        self._write_test_profile()
+
+    def _write_test_profile(self) -> None:
+        profiles_dir = Path(self._isolated_home) / ".jenkins-inspector" / "profiles"
+        profiles_dir.mkdir(parents=True, exist_ok=True)
+        (profiles_dir / f"{self.TEST_PROFILE_NAME}.env").write_text(
+            f"JENKINS_URL={self.url}\n"
+            f"JENKINS_USER_ID={self.username}\n"
+            f"JENKINS_API_TOKEN={self.token}\n"
+        )
 
     def get_env(self) -> dict:
-        """取得包含 Jenkins 連線資訊的環境變數字典"""
+        """取得包含 Jenkins 連線資訊的環境變數字典，強制走固定名稱的 named profile"""
         env = os.environ.copy()
+        env["HOME"] = self._isolated_home
+        env["JENKEE_PROFILE"] = self.TEST_PROFILE_NAME
         env["JENKINS_URL"] = self.url
         env["JENKINS_USER_ID"] = self.username
         env["JENKINS_API_TOKEN"] = self.token
+        return env
+
+    def get_bad_auth_env(self) -> dict:
+        """取得帶錯誤 token 的環境變數（同樣隔離 HOME，但刻意不透過 named
+        profile：profile 檔案裡正確的 token 會蓋過這裡刻意注入的錯誤值，
+        讓「必須認證失敗」的測試失去意義）"""
+        env = os.environ.copy()
+        env["HOME"] = self._isolated_home
+        env.pop("JENKEE_PROFILE", None)
+        env["JENKINS_URL"] = self.url
+        env["JENKINS_USER_ID"] = self.username
+        env["JENKINS_API_TOKEN"] = "intentionally-wrong-token-for-testing"
         return env
 
     def get_logs(self) -> tuple[str, str]:
@@ -237,12 +271,7 @@ def jenkins_bad_env(jenkins_instance: JenkinsTestInstance) -> dict:
 
     用於測試認證失敗的情況。
     """
-    import os
-    env = os.environ.copy()
-    env["JENKINS_URL"] = jenkins_instance.url
-    env["JENKINS_USER_ID"] = jenkins_instance.username
-    env["JENKINS_API_TOKEN"] = "intentionally-wrong-token-for-testing"
-    return env
+    return jenkins_instance.get_bad_auth_env()
 
 
 class JenkeeCommandBuilder:

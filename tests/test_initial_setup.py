@@ -402,13 +402,11 @@ def test_error_wrong_credentials(jenkins_instance):
     - 顯示認證失敗錯誤訊息
     """
     import subprocess
-    import os
 
-    # Arrange: 建立錯誤的環境變數
-    env = os.environ.copy()
-    env["JENKINS_URL"] = jenkins_instance.url
-    env["JENKINS_USER_ID"] = jenkins_instance.username
-    env["JENKINS_API_TOKEN"] = "wrong_token_value"
+    # Arrange: 使用隔離過 HOME、帶錯誤 token 的環境變數
+    # （不能自己組 env：沒隔離 HOME 的話，開發者本機真實的 named profile
+    # 會蓋過這裡刻意注入的錯誤 token，讓這個測試失去意義）
+    env = jenkins_instance.get_bad_auth_env()
 
     # Act: 使用錯誤的 token 執行 auth
     result = subprocess.run(
