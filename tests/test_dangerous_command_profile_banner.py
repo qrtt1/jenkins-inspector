@@ -23,6 +23,21 @@ def clean_env(monkeypatch):
         monkeypatch.delenv(key, raising=False)
 
 
+def test_banner_does_not_pollute_stdout(tmp_path, capsys):
+    """指令的實際輸出（例如 groovy 腳本結果）靠 stdout 傳遞，banner 印到 stdout
+    會混進真正的輸出內容裡，讓呼叫端解析失敗。banner 只能走 stderr。"""
+    (tmp_path / ".env").write_text(
+        "JENKINS_URL=http://default/\nJENKINS_USER_ID=u\nJENKINS_API_TOKEN=t\n"
+    )
+    config = JenkinsConfig(base_dir=tmp_path)
+    capsys.readouterr()  # discard construction-time output
+
+    cmd = _DummyDangerousCommand(["--yes-i-really-mean-it"])
+    cmd.require_confirmation("delete something", config)
+
+    assert "Active profile" not in capsys.readouterr().out
+
+
 def test_shows_default_profile_banner_before_prompt(tmp_path, capsys):
     (tmp_path / ".env").write_text(
         "JENKINS_URL=http://default/\nJENKINS_USER_ID=u\nJENKINS_API_TOKEN=t\n"
@@ -34,7 +49,7 @@ def test_shows_default_profile_banner_before_prompt(tmp_path, capsys):
     result = cmd.require_confirmation("delete something", config)
 
     assert result is True
-    assert "Active profile: default (http://default/)" in capsys.readouterr().out
+    assert "Active profile: default (http://default/)" in capsys.readouterr().err
 
 
 def test_does_not_duplicate_banner_for_named_profile(tmp_path, monkeypatch, capsys):
@@ -50,7 +65,7 @@ def test_does_not_duplicate_banner_for_named_profile(tmp_path, monkeypatch, caps
     cmd = _DummyDangerousCommand(["--yes-i-really-mean-it"])
     cmd.require_confirmation("delete something", config)
 
-    assert "Active profile" not in capsys.readouterr().out
+    assert "Active profile" not in capsys.readouterr().err
 
 
 def test_banner_shows_even_with_skip_confirmation_flag(tmp_path, capsys):
@@ -63,7 +78,7 @@ def test_banner_shows_even_with_skip_confirmation_flag(tmp_path, capsys):
     cmd = _DummyDangerousCommand(["--yes-i-really-mean-it"])
     cmd.require_confirmation("delete something", config)
 
-    assert "Active profile: default" in capsys.readouterr().out
+    assert "Active profile: default" in capsys.readouterr().err
 
 
 def test_backward_compatible_without_config_argument():

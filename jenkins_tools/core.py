@@ -80,7 +80,7 @@ class DangerousCommandMixin:
             True if confirmed (either via flag or user input), False if cancelled
         """
         if config is not None and config.profile_name is None:
-            print(f"Active profile: default ({config.jenkins_url})")
+            print(f"Active profile: default ({config.jenkins_url})", file=sys.stderr)
 
         # Check if confirmation flag was present
         if self._skip_confirmation:
