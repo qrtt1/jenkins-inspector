@@ -16,13 +16,13 @@
 
 最初，我只是想做一個簡單的工具：用命令列出 jobs、抓下 XML、然後自己 diff 比對。那時候我直接呼叫 `jenkins-cli.jar`，還特地寫了 prompt 來教 AI agent 怎麼用。 但很快就發現問題了。AI agent 常常搞錯 `jenkins-cli.jar` 的參數格式，明明教過還是會出錯。我開始思考：與其一直教它用複雜的工具，不如直接把工具改簡單一點？ 於是我把常用的操作包裝成簡單的 CLI 命令。神奇的事情發生了：AI agent 幾乎不用特別教，看看 help 就能正確使用。原來簡化介面真的能讓 AI 更好發揮。
 
-後來工具慢慢長大了。從最初的 list、get、diff，擴展到完整的 Jenkins 管理功能。現在有 24 個命令和完整的測試覆蓋，但核心理念沒變：讓 AI agent 幫你探索和管理 Jenkins。
+後來工具慢慢長大了。從最初的 list、get、diff，擴展到完整的 Jenkins 管理功能。現在有 25 個命令和完整的測試覆蓋，但核心理念沒變：讓 AI agent 幫你探索和管理 Jenkins。
 
 一開始我們專注在唯讀操作：列出 jobs、抓配置、看 console。這些操作很安全，不會改變 Jenkins 的任何東西。這也是為什麼專案的 repository 名稱叫 `jenkins-inspector`，因為那時候真的只有檢視、探索資料的功能。後來才慢慢加入管理功能：建立 job、觸發 build、刪除資源。這些會變更 Jenkins 內容的操作，我們都加上了特別的提醒和確認機制。
 
 ## 特色
 
-- 🚀 24 個完整的 Jenkins CLI 命令
+- 🚀 25 個完整的 Jenkins CLI 命令
 - 🧪 完整的測試覆蓋所有功能
 - 🤖 專為 AI Agent 設計的互動模式
 - 🔒 支援多種 Jenkins credentials 類型
@@ -160,6 +160,7 @@ jenkee auth
 | `list-credentials` | 列出 Jenkins credentials metadata | `jenkee list-credentials [domain]` |
 | `describe-credentials` | 查看特定 credential 詳細資訊 | `jenkee describe-credentials <id> [--show-secret]` |
 | `domain` | 管理 credentials domains | `jenkee domain list\|create <name>` |
+| `gcp` | 管理 GCP service account credentials | `jenkee gcp credential create <id> <key.json>` |
 | `add-job-to-view` | 將 jobs 加入到 view | `jenkee add-job-to-view <view> <job> [job ...]` |
 | `copy-job` | 複製 job 為新 job | `jenkee copy-job <source> <destination>` |
 | `update-job` | 更新 job 配置 | `jenkee update-job <job> < config.xml` |

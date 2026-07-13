@@ -30,7 +30,7 @@ jenkee help <command>    # 顯示特定命令的詳細說明
 
 ```bash
 $ jenkee help
-Jenkins Inspector CLI v0.2.1
+Jenkins Inspector CLI v0.7.0
 
 Usage: jenkee <command> [options]
        jenkee help <command>  Show detailed help for a command
@@ -39,9 +39,13 @@ Available commands:
 
   add-job-to-view           Add jobs to a view
   auth                      Verify Jenkins authentication
+  build                     Trigger a Jenkins job build
   console                   Get console output of a build
   copy-job                  Copy a job to a new job
+  create-job                Create a new job from XML configuration
   describe-credentials      Describe a specific credential
+  domain                    Manage credentials domains
+  gcp                       Manage GCP service account credentials (see docs/GCP_CREDENTIALS.md)
   get-job                   Get job XML configuration
   help                      Show help information
   job-diff                  Compare two job configurations
@@ -50,6 +54,8 @@ Available commands:
   list-credentials          List Jenkins credentials metadata
   list-jobs                 List jobs in a view or all jobs
   list-views                List all Jenkins views
+  profile                   Manage named Jenkins connection profiles (multi-site support)
+  stop-builds               Stop all running builds for job(s)
   update-job                Update job configuration from XML
 
 Run 'jenkee help <command>' for detailed information about a specific command.
