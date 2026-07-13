@@ -31,7 +31,7 @@ def test_profile_list_via_cli(tmp_path):
     )
 
     assert result.returncode == 0
-    assert "default (active)" in result.stdout
+    assert "default (not configured) (active)" in result.stdout
 
 
 def test_profile_use_then_list_reflects_switch(tmp_path):
@@ -46,7 +46,7 @@ def test_profile_use_then_list_reflects_switch(tmp_path):
     list_result = subprocess.run(
         ["jenkee", "profile", "list"], capture_output=True, text=True, env=env,
     )
-    assert "ops (active)" in list_result.stdout
+    assert "ops (http://ops/) (active)" in list_result.stdout
 
 
 def test_global_profile_flag_overrides_without_persisting(tmp_path):

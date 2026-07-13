@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from dotenv import dotenv_values
+
 from jenkins_tools.core import Command, JenkinsConfig
 
 _VALID_PROFILE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -59,9 +61,21 @@ class ProfileCommand(Command):
 
         print("Available profiles:")
         for name in names:
+            env_path = (self.base_dir / ".env") if name == "default" else profiles_dir / f"{name}.env"
+            url = self._profile_url(env_path)
             marker = " (active)" if name == (active_name or "default") else ""
-            print(f"  {name}{marker}")
+            print(f"  {name} ({url}){marker}")
         return 0
+
+    @staticmethod
+    def _profile_url(env_path: Path) -> str:
+        """Best-effort JENKINS_URL lookup for `list` -- must never raise,
+        `list` has to keep working even when a profile file is missing or broken."""
+        try:
+            url = dotenv_values(env_path).get("JENKINS_URL")
+        except (OSError, UnicodeDecodeError):
+            return "not configured"
+        return url or "not configured"
 
     def _use(self, rest: list[str]) -> int:
         """Switch the persistent active profile"""

@@ -28,7 +28,7 @@ def test_list_shows_default_active_when_nothing_configured(tmp_path, capsys):
     exit_code = ProfileCommand(["list"], base_dir=tmp_path).execute()
 
     assert exit_code == 0
-    assert "default (active)" in capsys.readouterr().out
+    assert "default (not configured) (active)" in capsys.readouterr().out
 
 
 def test_list_shows_named_profiles(tmp_path, capsys):
@@ -39,9 +39,24 @@ def test_list_shows_named_profiles(tmp_path, capsys):
 
     out = capsys.readouterr().out
     assert exit_code == 0
-    assert "ops" in out
-    assert "pchome-prod" in out
-    assert "default (active)" in out  # 還沒切換前，預設仍是 active
+    assert "ops (http://ops/)" in out
+    assert "pchome-prod (http://pchome/)" in out
+    assert "default (not configured) (active)" in out  # 還沒切換前，預設仍是 active
+
+
+def test_list_shows_url_for_each_profile_so_default_is_identifiable(tmp_path, capsys):
+    """default 光看名字看不出是哪個站台，要能像 named profile 一樣印出 URL。"""
+    (tmp_path / ".env").write_text(
+        "JENKINS_URL=http://jenkins.ops.tenmax.tw:8080/\nJENKINS_USER_ID=u\nJENKINS_API_TOKEN=t\n"
+    )
+    _write_profile(tmp_path, "pchome-prod", "http://jenkins.prod.pchome.tenmax.tw:8080/")
+
+    exit_code = ProfileCommand(["list"], base_dir=tmp_path).execute()
+
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    assert "default (http://jenkins.ops.tenmax.tw:8080/) (active)" in out
+    assert "pchome-prod (http://jenkins.prod.pchome.tenmax.tw:8080/)" in out
 
 
 def test_list_marks_env_override_as_active(tmp_path, monkeypatch, capsys):
@@ -50,7 +65,7 @@ def test_list_marks_env_override_as_active(tmp_path, monkeypatch, capsys):
 
     ProfileCommand(["list"], base_dir=tmp_path).execute()
 
-    assert "ops (active)" in capsys.readouterr().out
+    assert "ops (http://ops/) (active)" in capsys.readouterr().out
 
 
 def test_list_survives_broken_current_profile_state(tmp_path, capsys):
