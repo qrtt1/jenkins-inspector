@@ -101,7 +101,6 @@ pip install -e ".[dev]"
 > 查看哪些命令需要特別注意：
 > ```bash
 > jenkee help --all
-> jenkee prompt --all
 > ```
 >
 > 詳細的危險命令說明請參考 [README.advanced.md](README.advanced.md)。
@@ -110,53 +109,9 @@ pip install -e ".[dev]"
 
 jenkee 從一開始就是設計給 AI agent 用的。命令結構很簡單：`jenkee <command> [options]`，不需要記憶複雜的參數組合。
 
-每個命令都有詳細的 help 說明和範例。AI agent 看一眼就知道怎麼用。輸出格式也很規律，方便它解析和理解。
+每個命令都有詳細的 help 說明和範例（`jenkee help <command>`）。AI agent 看一眼就知道怎麼用。輸出格式也很規律，方便它解析和理解。
 
-如果你想讓 AI assistant（像是 ChatGPT 或 Claude）幫你操作 Jenkins，可以先跑這個命令：
-
-```bash
-jenkee prompt
-```
-
-這會輸出一份完整的使用指引。包含所有命令的說明、使用情境、還有常見任務的組合範例。把內容複製給 AI，它就能立刻上手幫你處理 Jenkins 的工作。
-
-### 自訂 AI Agent Prompt
-
-如果需要自訂 prompt 內容（例如：加入團隊特定的工作流程、命名規範等），可以透過以下方式：
-
-**方式 1：使用預設位置**
-
-```bash
-# 建立自訂 prompt
-cat > ~/.jenkins-inspector/prompt.md << 'EOF'
-# 我的使用指引
-
-自訂的 prompt 內容...
-EOF
-```
-
-**方式 2：使用環境變數指定檔案位置**
-
-```bash
-# 設定環境變數
-export JENKINS_INSPECTOR_PROMPT_FILE=/path/to/my-prompt.md
-
-# 執行 prompt 命令
-jenkee prompt
-```
-
-環境變數 `JENKINS_INSPECTOR_PROMPT_FILE` 的優先級高於預設位置。
-
-**暫時忽略自訂 prompt**
-
-如果需要暫時使用預設 prompt 而不刪除自訂檔案：
-
-```bash
-# 使用 --ignore-override flag
-jenkee prompt --ignore-override
-```
-
-詳細說明請參考 [docs/examples/prompt.md](docs/examples/prompt.md)。
+如果你想讓 Claude Code 幫你操作 Jenkins，直接安裝下面的 `jenkins-helper` skill 即可，不需要額外準備 prompt 文字。
 
 ### Claude Code Skill
 
@@ -193,7 +148,6 @@ jenkee auth
 | 命令 | 說明 | 範例 |
 |------|------|------|
 | `help` | 顯示命令說明 | `jenkee help [command]` |
-| `prompt` | 顯示 AI agent 使用指引 | `jenkee prompt` |
 | `auth` | 驗證 Jenkins 認證 | `jenkee auth` |
 | `list-views` | 列出所有 views | `jenkee list-views` |
 | `list-jobs` | 列出 view 中的 jobs | `jenkee list-jobs AVENGERS` |
@@ -210,6 +164,7 @@ jenkee auth
 | `build` | 觸發 job build | `jenkee build <job> [-p key=value] [-s] [-f]` |
 | `stop-builds` | 停止執行中的 builds | `jenkee stop-builds <job> [job ...]` |
 | `create-job` | 建立新 job | `jenkee create-job <job> < config.xml` |
+| `profile` | 管理多組 Jenkins 連線 profile（多站台） | `jenkee profile list\|use\|current` |
 
 詳細使用說明請參考 [docs/examples/](docs/examples/) 目錄下的各命令文件。
 
@@ -255,5 +210,5 @@ jenkee auth
 
 遵循 CODING_GUIDE 可確保：
 - 程式碼風格一致
-- 功能完整實作（包含 help、prompt、example 文件）
+- 功能完整實作（包含 help、example 文件）
 - 通過所有整合測試

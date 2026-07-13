@@ -28,7 +28,6 @@ from jenkins_tools.commands import (
     GroovyCommand,
     DomainCommand,
     HelpCommand,
-    PromptCommand,
     DevQACommand,
     ProfileCommand,
 )
@@ -149,9 +148,6 @@ def main():
         sys.exit(cmd.execute())
     elif command == "profile":
         cmd = ProfileCommand(argv[1:])
-        sys.exit(cmd.execute())
-    elif command == "prompt":
-        cmd = PromptCommand(argv[1:])
         sys.exit(cmd.execute())
     elif command == "help":
         cmd = HelpCommand(argv[1:])
