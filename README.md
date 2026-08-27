@@ -36,7 +36,7 @@
 # 安裝
 pip install jenkee
 
-# 設定認證
+# 設定預設 profile
 mkdir -p ~/.jenkins-inspector
 cat > ~/.jenkins-inspector/.env << EOF
 JENKINS_URL=http://your-jenkins-server:8080/
@@ -53,6 +53,8 @@ jenkee list-jobs --all
 # 觸發 build
 jenkee build my-job
 ```
+
+如果要管理多組 Jenkins 連線，請參考[多站台 Profile 設定](#多站台-profile-設定)。
 
 ## 安裝
 
@@ -138,22 +140,43 @@ codex plugin add jenkins-helper@jenkins-inspector
 
 plugin 原始碼位於 [`plugins/jenkins-helper/`](plugins/jenkins-helper/)。
 
-## 設定認證
+## 多站台 Profile 設定
+
+Quick Start 的 `~/.jenkins-inspector/.env` 是 `default` profile。若要管理多個 Jenkins 站台，可以為每個站台建立 named profile：
 
 ```bash
-# 建立設定檔目錄
-mkdir -p ~/.jenkins-inspector
+# 建立 named profile
+mkdir -p ~/.jenkins-inspector/profiles
 
-# 編輯 .env 檔案
-cat > ~/.jenkins-inspector/.env << EOF
+# 例如建立 production profile
+cat > ~/.jenkins-inspector/profiles/production.env << 'EOF'
 JENKINS_URL=http://your-jenkins-server:8080/
 JENKINS_USER_ID=your_email@example.com
 JENKINS_API_TOKEN=your_api_token
 EOF
 
-# 驗證認證
+# 查看並切換 profile
+jenkee profile list
+jenkee profile use production
+jenkee profile current
+
+# 驗證目前 profile 的認證
 jenkee auth
 ```
+
+若只想讓單一指令使用特定 profile，不變更持久設定，可以使用全域 `--profile` flag：
+
+```bash
+jenkee --profile production list-jobs --all
+```
+
+也可以設定 `JENKEE_PROFILE=production` 暫時覆蓋。Profile 的選用優先順序如下：
+
+1. `--profile <name>` 或 `JENKEE_PROFILE`
+2. `jenkee profile use <name>` 選定的 profile
+3. `default` profile（`~/.jenkins-inspector/.env`）
+
+指定的 named profile 不存在時，jenkee 會直接報錯，不會自動改用 `default`，避免指令送到錯誤的 Jenkins 站台。完整說明請參考 [`docs/examples/profile.md`](docs/examples/profile.md)。
 
 ## 可用命令
 
