@@ -14,9 +14,9 @@ jobs:
       matrix:
         include:
           - python-version: '3.11'
-            jenkins-image: 'jenkins/jenkins:2.516.2-jdk21@sha256:4b4a5eb0f69af5e48c9f55c0aa58da5d098eae1a4156d1e540f2f35c933b8695'
+            jenkins-image: 'jenkins/jenkins:2.568.1-jdk21@sha256:f4f65e6cd1405cd889b7f5ac33f9d5cdc2a099de6b87fe8a3933b9c5d53d1d02'
           - python-version: '3.13'
-            jenkins-image: 'jenkins/jenkins:2.516.2-jdk21@sha256:4b4a5eb0f69af5e48c9f55c0aa58da5d098eae1a4156d1e540f2f35c933b8695'
+            jenkins-image: 'jenkins/jenkins:2.568.1-jdk21@sha256:f4f65e6cd1405cd889b7f5ac33f9d5cdc2a099de6b87fe8a3933b9c5d53d1d02'
       fail-fast: false
 
     steps:
