@@ -1,403 +1,172 @@
 ---
 name: jenkins-helper
-description: "Manage and interact with Jenkins using the jenkee CLI tool. TRIGGERING RULES: (A) MUST trigger when user mentions 'jenkins' or 'jenkee' with any Jenkins-related task. (B) MUST trigger when 'jks' appears with Jenkins context keywords like: job, build, console, credential, view, pipeline, or groovy. (C) When user only mentions 'jks' without clear context, ask for clarification before triggering. CAPABILITIES: (1) Finding jobs by name or pattern, (2) Checking job status, build history, or console logs, (3) Modifying job configurations like branch changes, (4) Managing credentials and domains, (5) Comparing job configurations, (6) Switching between multiple Jenkins sites via profiles, (7) Any other Jenkins-related operations. This skill uses the jenkee command-line tool (also aliased as jks)."
+description: Operate Jenkins through the installed jenkee or jks CLI to inspect jobs, builds, logs, profiles, credentials, and configuration, or to perform explicitly authorized changes. Use when the user asks to work with Jenkins or jenkee, or uses jks in a Jenkins context. Do not use for generic CI/CD questions that do not require this CLI.
 ---
 
 # Jenkins Helper
 
-## Overview
+Use `jenkee` to carry out Jenkins work. `jks` is an equivalent alias.
 
-This skill enables interaction with Jenkins through the `jenkee` CLI tool (also aliased as `jks`), providing capabilities for job management, build monitoring, credential handling, configuration updates, and switching between multiple Jenkins sites.
+## Boundaries
 
-**Command aliases:**
-- `jenkee` - Primary command name
-- `jks` - Short alias (identical functionality)
+- Treat `jenkee help` and `jenkee help <command>` as authoritative for the installed version.
+- This skill does not install `jenkee` or create credential files unless the user explicitly asks for setup help.
+- Never display, log, or place Jenkins API tokens in commands, conversation text, or tracked files.
+- Do not assume which Jenkins site the user means when multiple profiles exist.
+- Do not rely on an agent hook as the only safeguard. Follow the safety protocol below even when a hook is installed.
 
-**Note:** This skill does NOT install or configure jenkee for the user. It only helps use jenkee once it's installed and configured.
+## Establish the environment
 
-## Setup
+Before the first Jenkins operation in a session:
 
-### Installation (User Responsibility)
+1. Check that the CLI exists with `command -v jenkee`.
+2. Run `jenkee help` to discover the current command surface.
+3. Before a command that contacts Jenkins, verify access with `jenkee auth` unless successful access is already established in the session.
+4. When profiles may be in use, or before any mutation, run `jenkee profile current` and report the resolved profile and URL.
 
-If jenkee is not installed, inform the user they need to install it themselves:
+If the CLI or authentication is unavailable, explain the failure and stop. Do not install software or write credentials without a separate user request.
 
-```bash
-# Using pip
-pip install jenkee
+## Profiles
 
-# Using pipx (recommended for CLI tools)
-pipx install jenkee
-```
-
-**Installation details:**
-- PyPI package: `jenkee`
-- GitHub repository: https://github.com/qrtt1/jenkins-inspector
-- Documentation: `jenkee help` (all commands) and `jenkee help <command>` (per-command syntax, options, and examples) after installation
-
-### Authentication Setup (User Responsibility)
-
-If `jenkee auth` fails, inform the user they need to configure authentication themselves:
-
-1. Create configuration directory:
-```bash
-mkdir -p ~/.jenkins-inspector
-```
-
-2. Create `.env` file with Jenkins credentials:
-```bash
-cat > ~/.jenkins-inspector/.env << EOF
-JENKINS_URL=http://your-jenkins-server:8080/
-JENKINS_USER_ID=your_email@example.com
-JENKINS_API_TOKEN=your_api_token
-EOF
-```
-
-3. Get API Token from Jenkins:
-   - Log into Jenkins web interface
-   - Go to: User → Configure → API Token
-   - Generate and copy the token
-
-**Important:** You should NOT create or modify these files for the user. Only provide the instructions.
-
-### Multiple Jenkins Sites (Profiles)
-
-jenkee supports named connection profiles for users who work with more than one Jenkins server. This is user-configured (each profile is its own `.env`-style file); the skill only helps *use* profiles that already exist.
+Use these commands to inspect existing profiles:
 
 ```bash
-# List all configured profiles, showing which one is active
 jenkee profile list
-
-# Switch the persistent active profile
-jenkee profile use <name>
-jenkee profile use --default
-
-# Show which profile is active and where its config came from
 jenkee profile current
 ```
 
-A profile can also be selected just for one invocation without changing the persistent state:
+Prefer a one-command override when the task names a specific site but does not ask to change persistent state:
 
 ```bash
 jenkee --profile <name> <command>
-# or
-JENKEE_PROFILE=<name> jenkee <command>
 ```
 
-If the user asks to create a new profile, give them the instructions (do not create files for them):
+Use `jenkee profile use <name>` or `jenkee profile use --default` only when the user asks to change the persistent active profile. If a requested profile is missing or invalid, stop instead of falling back to another site.
+
+## Common operations
+
+Inspect and troubleshoot:
 
 ```bash
-mkdir -p ~/.jenkins-inspector/profiles
-cat > ~/.jenkins-inspector/profiles/<name>.env << EOF
-JENKINS_URL=http://other-jenkins-server:8080/
-JENKINS_USER_ID=your_email@example.com
-JENKINS_API_TOKEN=your_api_token
-EOF
-```
-
-**Why this matters for safety:** when profiles are in use, `jenkee` always prints `Active profile: <name> (<url>)` before running, and again before any destructive confirmation. Read that line rather than assuming which Jenkins site a command targets — see the Safety Protocol below.
-
-## Verification
-
-Before using any jenkee commands:
-
-1. **Verify jenkee installation:**
-
-```bash
-command -v jenkee
-```
-
-If not installed, provide installation instructions above and stop.
-
-2. **Verify authentication:**
-
-```bash
-jenkee auth
-```
-
-If authentication fails, provide authentication setup instructions above and stop.
-
-3. **Check which site is active (if profiles may be in use):**
-
-```bash
-jenkee profile current
-```
-
-If this reports a profile you didn't expect, confirm with the user which Jenkins site they mean before proceeding — do not silently assume the default.
-
-4. **Confirm the current command surface:**
-
-```bash
-jenkee help
-```
-
-Command names and flags can change between versions. `jenkee help` always reflects the version actually installed, so treat its output as authoritative over anything memorized here. Run `jenkee help <command>` for the full syntax, options, and worked examples of any specific command before using it for the first time in a session.
-
-## Core Workflows
-
-### Finding Jobs
-
-To find jobs by name pattern:
-
-```bash
-# List all views first
 jenkee list-views
-
-# List jobs in a specific view
 jenkee list-jobs <view-name>
-
-# To search across all jobs for a pattern like "rich"
-jenkee list-jobs --all | grep -i rich
-```
-
-### Checking Job Status
-
-To check job status and recent builds:
-
-```bash
-# Get job status and trigger relationships
+jenkee list-jobs --all
 jenkee job-status <job-name>
-
-# List build history
 jenkee list-builds <job-name>
-
-# View console output of latest build
-jenkee console <job-name>
-
-# View specific build console
-jenkee console <job-name> <build-number>
+jenkee console <job-name> [build-number]
+jenkee job-diff <job-a> <job-b>
 ```
 
-### Triggering and Stopping Builds
+Trigger and stop builds:
 
 ```bash
-# Trigger a build (see `jenkee help build` for parameters, sync/follow flags)
 jenkee build <job-name>
-
-# Stop running builds for one or more jobs
 jenkee stop-builds <job-name> [job-name ...]
 ```
 
-### Modifying Job Configuration
-
-To modify job settings like changing the branch:
+Manage jobs and views:
 
 ```bash
-# 1. ALWAYS get the LATEST job configuration first
-jenkee get-job <job-name> > job-config.xml
-
-# 2. Edit the XML file to change settings
-# For branch changes, look for <branches> section in XML
-
-# 3. Update the job with modified configuration
-jenkee update-job <job-name> < job-config.xml
-```
-
-**CRITICAL: Always fetch fresh configuration before updating**
-
-Never reuse old local XML files. Always run `jenkee get-job` immediately before making changes to:
-- Avoid overwriting manual changes made by others via Jenkins UI
-- Prevent race conditions when multiple people modify the same job
-- Ensure your changes are based on the current state
-
-**When modifying XML:**
-- For Git branch changes, find the `<hudson.plugins.git.BranchSpec>` section
-- Update the `<name>` field to the desired branch (e.g., `*/foobar` or `foobar`)
-- Preserve all XML structure and formatting
-
-### Creating Jobs and Organizing Views
-
-```bash
-# Create a new job from an XML configuration file
 jenkee create-job <job-name> < config.xml
-
-# Add existing jobs to a view
+jenkee copy-job <source-job> <new-job-name>
 jenkee add-job-to-view <view-name> <job-name> [job-name ...]
 ```
 
-### Managing Credentials and Domains
+Inspect credentials and domains:
 
 ```bash
-# List all credential domains
 jenkee domain list
-
-# Create a new domain (requires confirmation)
-jenkee domain create <name> --description="..." --yes-i-really-mean-it
-
-# List all credentials
-jenkee list-credentials
-
-# List credentials in specific domain
-jenkee list-credentials <domain-name>
-
-# View credential details
+jenkee list-credentials [domain-name]
 jenkee describe-credentials <credential-id>
-
-# Create GCP credential
-jenkee gcp credential create <credential-id> <path-to-service-account.json>
+jenkee gcp credential create <credential-id> <service-account.json>
 ```
 
-### Comparing Jobs
+Run `jenkee help <command>` before using unfamiliar syntax. Some destructive commands are hidden from ordinary help; discover them with `jenkee help --all` only when the task requires them.
 
-To compare configurations between jobs:
+## Updating job configuration
+
+Always fetch a fresh configuration immediately before editing. Never reuse an old XML copy because it may overwrite changes made through Jenkins or by another operator.
+
+Use a temporary directory for the working copy:
 
 ```bash
-jenkee job-diff <job1> <job2>
+work_dir=$(mktemp -d)
+jenkee get-job <job-name> > "$work_dir/job-config.xml"
 ```
 
-## Common Task Patterns
+Make the smallest requested XML change, preserve unrelated structure, review the diff, then propose the exact `update-job` command. Remove the temporary directory after the task when it is no longer needed.
 
-### Pattern 1: Find and inspect a job
+## Safety protocol
+
+### Read-only commands
+
+Listing, status, logs, and configuration reads may run once the target site is established. Report the site when it matters to interpreting the result.
+
+### State-changing commands
+
+Commands such as `build`, `stop-builds`, `create-job`, `copy-job`, `update-job`, view changes, and credential creation affect Jenkins state. Before running them:
+
+- establish the active profile and URL;
+- identify the resources and expected effect;
+- show the exact command when the scope is not already unambiguous;
+- obtain clarification if the user's request does not clearly authorize that exact target and change.
+
+### High-risk commands
+
+Treat deletion, Groovy execution, disabling or enabling jobs, domain mutations, credential deletion, and bulk cleanup as high risk. This includes at least:
+
+- `delete-job`
+- `delete-builds`
+- `groovy`
+- `disable-job` and `enable-job`
+- `domain create`, `domain update`, and `domain delete`
+- `gcp credential delete`
+
+Before every high-risk execution:
+
+1. Run `jenkee help --all` and read `jenkee help <command>`.
+2. Verify there is no safer standard command that satisfies the request.
+3. Resolve and state the active profile and Jenkins URL.
+4. List every known affected resource, consequence, and whether recovery is possible.
+5. Show the exact command or complete Groovy script.
+6. Ask for explicit approval and wait for it.
+7. Execute only the approved command. Add `--yes-i-really-mean-it` only after approval when the CLI requires it.
+
+Groovy is high risk even when intended to be read-only because it executes arbitrary server-side code. Never use Groovy merely as a shortcut for an available standard command.
+
+## Setup guidance
+
+If the user asks how to install the CLI, recommend an isolated CLI installer:
 
 ```bash
-jenkee list-views
-jenkee list-jobs <view> | grep <pattern>
-jenkee job-status <job-name>
-jenkee list-builds <job-name>
+pipx install jenkee
 ```
 
-### Pattern 2: Debug failed build
+If the user asks how to configure authentication or profiles, explain the `.env` layout using placeholders. Do not request the token in chat, write the file for them, or include a real token in an example.
 
-```bash
-jenkee job-status <job-name>
-jenkee list-builds <job-name>
-jenkee console <job-name> <failed-build-number>
+Default configuration path:
+
+```text
+~/.jenkins-inspector/.env
 ```
 
-### Pattern 3: Clone and modify job
+Named profile path:
 
-```bash
-jenkee copy-job <source-job> <new-job-name>
-# ALWAYS get fresh config before modifying
-jenkee get-job <new-job-name> > config.xml
-# Edit config.xml
-jenkee update-job <new-job-name> < config.xml
+```text
+~/.jenkins-inspector/profiles/<name>.env
 ```
 
-### Pattern 4: Operate on a specific site when multiple profiles exist
+Expected keys:
 
-```bash
-jenkee profile list
-jenkee profile use <name>
-jenkee job-status <job-name>   # now targets <name>'s Jenkins
+```dotenv
+JENKINS_URL=https://jenkins.example.com/
+JENKINS_USER_ID=your-user-id
+JENKINS_API_TOKEN=<redacted>
 ```
 
-## Advanced Features (High-Risk Operations)
+## Reporting results
 
-jenkee includes advanced features that are **hidden by default** because they involve destructive operations, deletion, or executing arbitrary code. These features require explicit access and user confirmation.
-
-### Accessing Advanced Features
-
-To view advanced features documentation:
-
-```bash
-# View all commands including advanced ones
-jenkee help --all
-```
-
-### Advanced Feature Categories
-
-**Advanced features typically include:**
-- Job deletion commands
-- Build deletion or cleanup operations
-- Groovy script execution (arbitrary code on Jenkins server)
-- Bulk operations that affect multiple resources
-- System-level configuration changes
-
-### MANDATORY Safety Protocol for Advanced Features
-
-**Before using ANY advanced feature, you MUST:**
-
-1. **Discover the feature exists:**
-   - Run `jenkee help --all`
-   - Read the complete documentation for the specific command with `jenkee help <command>`
-
-2. **Verify it's the only solution:**
-   - Confirm there is NO standard (non-advanced) command that can accomplish the task
-   - Check `jenkee help` (without --all) for alternatives
-
-3. **Confirm the target site:**
-   - If the user has more than one profile configured, run `jenkee profile current` (or read the `Active profile: ...` banner jenkee prints before the confirmation prompt) and confirm it matches the site the user actually means
-   - A destructive command run against the wrong profile is not reversible by re-running it against the right one
-
-4. **Present detailed proposal to user:**
-   - Explain what the command will do
-   - State which Jenkins site/profile it will run against
-   - List all resources that will be affected
-   - Describe the risks and consequences
-   - Explain whether the operation is reversible or irreversible
-   - Show the exact command you plan to execute
-
-5. **Get explicit user confirmation:**
-   - Wait for user to review and approve
-   - Do NOT proceed without clear approval
-   - If user has any doubts, discuss alternatives first
-
-6. **Execute with caution:**
-   - Run the approved command exactly as presented
-   - Monitor the output for errors
-   - Report the results back to user
-
-### Example: Groovy Command Protocol
-
-The `groovy` command is the highest-risk advanced feature. Before using it:
-
-```
-❌ WRONG Approach:
-User: "List all jobs"
-AI: [Runs groovy script directly]
-
-✅ CORRECT Approach:
-User: "Find all jobs using credential X"
-AI:
-"I've checked `jenkee help` and there's no standard command for this.
-I need to use the advanced `groovy` command.
-
-Let me get the advanced documentation first:
-[Runs: jenkee help --all]
-
-Based on the documentation, I can write a groovy script that:
-- Reads all job configurations (read-only)
-- Searches for credential ID 'X'
-- Returns matching job names
-- Does NOT modify any data
-
-Here's the script I propose:
-[Show complete script]
-
-This is read-only and safe. May I proceed?"
-
-[Wait for user approval before executing]
-```
-
-### Risk Levels
-
-**🟢 Low Risk (Standard Features):**
-- Reading configurations, logs, status
-- Listing resources
-- No `--all` flag needed
-
-**🟡 Medium Risk (May require --all):**
-- Creating or copying resources
-- Non-destructive modifications
-- Requires careful review
-
-**🔴 High Risk (Requires --all):**
-- Deleting jobs or builds
-- Groovy script execution
-- Bulk operations
-- System configuration changes
-- **MUST follow safety protocol, including the target-site confirmation step**
-
-## Important Guidelines
-
-1. **Run `jenkee help` (and `jenkee help <command>` for unfamiliar commands)** — it reflects the exact version installed, so trust it over anything memorized here
-2. **Verify authentication** with `jenkee auth`
-3. **Check the active profile** with `jenkee profile current` whenever the user works with more than one Jenkins site, and before any destructive command
-4. **Advanced features require `--all` flag** - Run `jenkee help --all` to access
-5. **Advanced features require explicit user approval** - Follow the mandatory safety protocol above
-6. **Job names are case-sensitive** - Use exact names when referencing jobs
-7. **XML editing requires care** - Always backup configuration before modifying
-
-## Version Compatibility
-
-This skill covers the command surface as of the version it shipped with. `jenkee help` and `jenkee help <command>` are always accurate for whatever version is actually installed — when in doubt about exact syntax or whether a command still exists, defer to their output over this document.
+- State which Jenkins profile or URL was used for mutations and high-risk operations.
+- Summarize the outcome, affected resources, and any partial failures.
+- Redact credentials and sensitive command output.
+- If execution stops before a mutation, clearly say that no Jenkins state was changed.

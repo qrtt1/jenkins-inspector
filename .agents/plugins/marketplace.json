@@ -1,0 +1,20 @@
+{
+  "name": "jenkins-inspector",
+  "interface": {
+    "displayName": "Jenkins Inspector"
+  },
+  "plugins": [
+    {
+      "name": "jenkins-helper",
+      "source": {
+        "source": "local",
+        "path": "./plugins/jenkins-helper"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Utilities"
+    }
+  ]
+}

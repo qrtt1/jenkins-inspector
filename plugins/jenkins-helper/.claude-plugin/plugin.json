@@ -1,6 +1,6 @@
 {
   "name": "jenkins-helper",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Manage and interact with Jenkins using the jenkee CLI tool: job management, build monitoring, credential handling, configuration updates, and multi-site profile switching.",
   "author": {
     "name": "qrtt1"

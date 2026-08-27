@@ -112,9 +112,9 @@ jenkee 從一開始就是設計給 AI agent 用的。命令結構很簡單：`je
 
 每個命令都有詳細的 help 說明和範例（`jenkee help <command>`）。AI agent 看一眼就知道怎麼用。輸出格式也很規律，方便它解析和理解。
 
-如果你想讓 Claude Code 幫你操作 Jenkins，直接安裝下面的 `jenkins-helper` skill 即可，不需要額外準備 prompt 文字。
+如果你想讓 AI agent 幫你操作 Jenkins，可以安裝 repository 內的 `jenkins-helper` plugin，不需要額外準備 prompt 文字。同一份 skill 同時供 Claude Code 與 Codex 使用，避免兩套操作規則逐漸不同步。
 
-### Claude Code Skill
+### Claude Code Plugin
 
 如果你使用 [Claude Code CLI](https://github.com/anthropics/claude-code)，可以透過 marketplace 安裝 `jenkins-helper` plugin，它整合了 jenkee 的完整功能和最佳實踐，並附帶一個攔截危險 jenkee 指令、提醒確認目標站台的 PreToolUse hook。
 
@@ -122,6 +122,19 @@ jenkee 從一開始就是設計給 AI agent 用的。命令結構很簡單：`je
 /plugin marketplace add qrtt1/jenkins-inspector
 /plugin install jenkins-helper@jenkins-inspector
 ```
+
+### Codex Plugin
+
+Codex 版本是 skills-only plugin，包含 Jenkins 操作流程、multi-profile 站台確認，以及高風險指令的核准規則。Claude Code 專屬的 `PreToolUse` hook 不會載入 Codex；Codex 會依 skill 的安全流程與 jenkee 自身的確認機制執行。
+
+透過公開 Git marketplace 安裝：
+
+```bash
+codex plugin marketplace add qrtt1/jenkins-inspector
+codex plugin add jenkins-helper@jenkins-inspector
+```
+
+安裝或更新後，請開啟新的 Codex 對話測試 plugin。
 
 plugin 原始碼位於 [`plugins/jenkins-helper/`](plugins/jenkins-helper/)。
 

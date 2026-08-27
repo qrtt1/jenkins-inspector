@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jenkins Helper"
+  short_description: "透過 jenkee 安全地檢查與管理 Jenkins"
+  default_prompt: "Use $jenkins-helper to inspect a Jenkins job and summarize its recent builds."

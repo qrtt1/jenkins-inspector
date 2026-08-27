@@ -1,0 +1,26 @@
+{
+  "name": "jenkins-helper",
+  "version": "1.1.0",
+  "description": "Operate Jenkins safely through the jenkee CLI, including multi-site profiles.",
+  "author": {
+    "name": "Jenkins Inspector"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Jenkins Helper",
+    "shortDescription": "Inspect and manage Jenkins safely with jenkee.",
+    "longDescription": "Discover Jenkins jobs, inspect builds and logs, manage named sites, and perform explicitly authorized changes through the jenkee CLI.",
+    "developerName": "Jenkins Inspector",
+    "category": "Utilities",
+    "capabilities": [
+      "Jenkins CLI",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Show the status and recent builds for a Jenkins job.",
+      "Find Jenkins jobs matching a name pattern.",
+      "Check which Jenkins profile is active."
+    ]
+  }
+}
